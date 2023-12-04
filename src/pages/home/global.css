@@ -1,0 +1,66 @@
+:root {
+  --w: 22%;
+  --footer-height: 1.5rem;
+}
+
+::-webkit-scrollbar {
+  width: 0.4em;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 16px;
+  background: #d9d9d9;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 16px;
+  background: #545454;
+}
+
+body {
+  font-size: 14px;
+}
+
+.active-region {
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: var(--footer-height);
+  position: fixed;
+  pointer-events: none;
+}
+
+body:not(.sidebar-collapsed) .active-region {
+  bottom: calc(45% + var(--footer-height));
+}
+
+@media screen(lg) {
+  body:not(.sidebar-collapsed) .active-region {
+    left: var(--w);
+    bottom: var(--footer-height);
+  }
+}
+
+/* reset some leaflet popup styles to match our design */
+.leaflet-popup-content-wrapper {
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+
+.leaflet-popup-content-wrapper:has(.data-layer-popup) {
+  max-height: 25em !important;
+}
+
+.leaflet-popup-content:has(.data-layer-popup) {
+  width: 25em !important;
+}
+
+.leaflet-popup-content:has(.streetview-popup) {
+  width: 25em !important;
+}
+
+.leaflet-popup-content-wrapper:has(.data-layer-popup) {
+  overflow: auto;
+  max-height: 45rem;
+  background-color: #fff9e6 !important;
+}

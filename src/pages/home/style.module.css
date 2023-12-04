@@ -1,0 +1,141 @@
+.side_bar {
+  bottom: 1.5rem;
+  z-index: 1000;
+  display: flex;
+  position: fixed;
+  flex-direction: column;
+  transition: 0.5s;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.coordinates_preview {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  bottom: 0;
+  color: #fff;
+  height: 1.5rem;
+  background-color: #4b4b4b;
+  border-top: 5px solid var(--brand);
+}
+
+.side_bar__hidden {
+  bottom: -100%;
+}
+
+.tab {
+  flex: 1 0 45%;
+}
+
+.network_summary {
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+}
+
+.network_summary::-webkit-details-marker {
+  display: none;
+}
+
+.network_summary::after {
+  content: "+";
+  position: absolute;
+  right: 1rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  top: 50%;
+  text-align: center;
+  transform: translate3d(0, -50%, 0);
+}
+
+.network[open] > .network_summary::after {
+  content: "-";
+}
+
+.coverage_levels {
+  --h: 1rem;
+
+  display: flex;
+  height: var(--h);
+}
+
+.coverage_level {
+  --radius: 0.25rem;
+
+  flex: 1;
+  position: relative;
+}
+
+.coverage_level:first-child {
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+
+.coverage_level:last-child {
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+.coverage_level--selected::before {
+  --size: 2rem;
+
+  left: 50%;
+  content: "";
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  bottom: calc(var(--h) / 2);
+  transform: translate3d(-50%, 0, 0);
+  background: url("/mtn-marker.png") no-repeat;
+  background-position: center;
+  background-size: contain;
+  animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, -10px, 0);
+  }
+}
+
+.side_bar_toggle {
+  position: fixed;
+  z-index: 1000;
+  left: 2rem;
+  background-color: var(--brand);
+  border-top-right-radius: 0.3rem;
+  border-bottom-right-radius: 0.3rem;
+  transform: rotate(-90deg);
+  bottom: calc(45% + 1.5rem);
+}
+
+.side_bar_toggle__collapsed {
+  bottom: 1.5rem;
+}
+
+@media screen(lg) {
+  .side_bar__hidden {
+    left: -100%;
+    bottom: 1.5rem;
+  }
+
+  .side_bar_toggle {
+    top: 90%;
+    bottom: unset;
+    left: var(--w);
+    transform: none;
+  }
+
+  .side_bar_toggle__collapsed {
+    left: 0;
+  }
+}
+
+.map {
+  font-family: inherit !important;
+}
