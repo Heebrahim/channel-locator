@@ -58,7 +58,6 @@ import {
   nonNullable,
   parseLatLng,
   scalesByZoomLevel,
-  sortCoverageSignals,
   stringToNumber,
 } from "./utils";
 
@@ -106,7 +105,7 @@ import styles from "./style.module.css";
 import { DataLayer } from "@/core/models/data-layer";
 import { DataLayerControl } from "./components/controls/data-layer";
 import { DistanceBetween } from "./components/distance";
-import { appointmentBookingUrl, eShopUrl } from "./env";
+import { appointmentBookingUrl } from "./env";
 import { DrawEvent, SearchType, Tab } from "./types";
 
 import { helpDoc } from "./env";
@@ -306,33 +305,6 @@ export function Home() {
     );
   }, [stores]);
 
-  const networks = useMemo(() => {
-    return pipe(
-      O.fromNullable(loaderData.networks),
-      O.map(
-        E.mapRight((networks) =>
-          networks.sort((a, b) => b.priority - a.priority)
-        )
-      )
-    );
-  }, [loaderData.networks]);
-
-  const network = useMemo(() => {
-    return navigation.state === "idle"
-      ? O.fromNullable(loaderData.network)
-      : pipe(
-          O.fromNullable(search.get("network")),
-          O.map(parseFloat),
-          O.flatMap((_) => {
-            return pipe(
-              networks,
-              O.flatMap(flow(E.getOrNull, O.fromNullable)),
-              O.flatMap(A.findFirst((network) => network.id === _))
-            );
-          })
-        );
-  }, [navigation.state, loaderData.network, search, networks]);
-
   const toast = useToast();
 
   const navigate = useNavigate();
@@ -345,23 +317,12 @@ export function Home() {
 
   const [showSideBar, setShowSideBar] = useState(true);
 
-  const showNoNetworkPopupTimeout = useRef<NodeJS.Timeout | null>(null);
-
   const [showStreetview, setShowStreetview] = useState<LatLng | null>(null);
 
-  const [showIntroModal, setShowIntroModal] = useState(import.meta.env.PROD);
+  const [showIntroModal, setShowIntroModal] = useState(import.meta.env.DEV);
   const [tourStepsEnabled, setTourStepsEnabled] = useState(false);
 
   const [isDrawing, setIsDrawing] = useState(false);
-
-  const [showNoNetworkPopup, setShowNoNetworkPopup] = useState(() => {
-    return (
-      O.isSome(network) &&
-      loaderData.latlng &&
-      loaderData.coverageSignal &&
-      O.isNone(loaderData.coverageSignal)
-    );
-  });
 
   const [markerLatlng, setLatLng] = useState(() => {
     return !loaderData.latlng ? null : new L.LatLng(lat, lng);
@@ -410,6 +371,7 @@ export function Home() {
         const result = yield* _(
           computeRoute({ to, from, routeMask, apiKey: googleMapsApiKey })
         );
+
 
         return result.routes.map((route) => {
           const polyline = route.polyline;
@@ -1176,17 +1138,6 @@ export function Home() {
     setSearch,
   ]);
 
-  const noNetworkPopup = useMemo(() => {
-    return showNoNetworkPopup ? (
-      <Popup position={[lat, lng]}>
-        <div className="py-2 space-y-2 text-center">
-          <span className="font-semibold text-base">No network</span>
-          {/* <Button className="w-full">Report</Button> */}
-        </div>
-      </Popup>
-    ) : null;
-  }, [showNoNetworkPopup, lat, lng]);
-
   const dataLayerPoint = useMemo(() => {
     return dataLayerTarget && dataLayerPointQuery.data
       ? pipe(
@@ -1332,33 +1283,6 @@ export function Home() {
     };
   }, [map, onZoomChange]);
 
-  useEffect(() => {
-    let timeout = showNoNetworkPopupTimeout.current;
-
-    if (timeout) clearTimeout(timeout);
-
-    if (showNoNetworkPopup) {
-      timeout = setTimeout(() => setShowNoNetworkPopup(false), 2000);
-      showNoNetworkPopupTimeout.current = timeout;
-    }
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [showNoNetworkPopup]);
-
-  useEffect(() => {
-    if (
-      navigation.state === "idle" &&
-      loaderData.latlng &&
-      loaderData.coverageSignal
-    ) {
-      setShowNoNetworkPopup(
-        O.isNone(loaderData.coverageSignal) && O.isSome(network)
-      );
-    }
-  }, [network, navigation.state, loaderData.latlng, loaderData.coverageSignal]);
-
   // useLayoutEffect(() => {
   //   if (import.meta.env.DEV) {
   //     // @ts-expect-error `setActiveArea` is injected by a leaflet plugin
@@ -1427,6 +1351,7 @@ export function Home() {
     if (navigation.state === "idle") {
       if (directionQuery.data && E.isRight(directionQuery.data)) {
         const route = directionQuery.data.right[0];
+        console.log(route)
 
         if (route) {
           const feature = L.polyline(
@@ -1510,7 +1435,7 @@ export function Home() {
     {
       selector: ".search-field-intro",
       content:
-        "Search for a location in order to get network coverage or to view stores.",
+        "Search for a location in order to get baranches or to view POS agents around you.",
     },
     {
       selector: ".search-field-auto-intro",
@@ -1552,24 +1477,6 @@ export function Home() {
             className={clsx("h-full flex-1", styles.map)}
           >
             <ZoomControl position={isLargeScreen ? "bottomright" : "topleft"} />
-
-            {pipe(
-              network,
-              O.match({
-                onNone: constNull,
-                onSome: (network) => (
-                  <WMSTileLayer
-                    transparent
-                    layers="nmc"
-                    opacity={0.7}
-                    id="tile-layer"
-                    key={network.id}
-                    format="image/png"
-                    url={`${layerURL}?layer=${network.mapName}`}
-                  />
-                ),
-              })
-            )}
 
             {loaderDataLayers.data
               ? pipe(
@@ -1723,8 +1630,6 @@ export function Home() {
               })
             )}
 
-            {noNetworkPopup}
-
             {showInternalTools && baseMapRegistered ? (
               <>
                 {mapDataLayers}
@@ -1797,7 +1702,7 @@ export function Home() {
         </div>
 
         <div className="px-4 flex flex-wrap gap-2">
-          <Button
+          {/* <Button
             as={Link}
             size="sm"
             className={styles.tab}
@@ -1806,13 +1711,13 @@ export function Home() {
             variant={tab === Tab.coverages ? "solid" : "outline"}
           >
             Coverages
-          </Button>
+          </Button> */}
 
           <Button
             as={Link}
             size="sm"
             className={styles.tab}
-            to={`/?${storeURLSearch}`}
+            to={`/?${storeURLSearch}&variant=${Variant.store}`}
             leftIcon={<IoStorefront />}
             variant={
               tab === Tab.stores && storeVariant === Variant.store
@@ -1820,7 +1725,22 @@ export function Home() {
                 : "outline"
             }
           >
-            Stores
+            Branches
+          </Button>
+
+          <Button
+            as={Link}
+            size="sm"
+            className={styles.tab}
+            leftIcon={<IoWifi />}
+            to={`/?${storeURLSearch}&variant=${Variant.posStand}`}
+            variant={
+              tab === Tab.stores && storeVariant === Variant.posStand
+                ? "solid"
+                : "outline"
+            }
+          >
+            POS Agents
           </Button>
 
           <Button
@@ -1835,244 +1755,13 @@ export function Home() {
                 : "outline"
             }
           >
-            MoMo Agents
+            ATM Stands
           </Button>
         </div>
 
         <div className="flex-1 flex flex-col overflow-y-auto">
-          {tab === Tab.coverages ? (
-            <div className="flex-1 flex flex-col p-4 space-y-4">
-              <div className="flex-1 overflow-y-auto">
-                {pipe(
-                  networks,
-                  O.match({
-                    onNone: () =>
-                      navigation.state === "loading" ? <Loader /> : null,
-                    onSome: E.match({
-                      onLeft: () => <LoadError />,
-                      onRight: (networks) => {
-                        return (
-                          <ul className="space-y-4 networks-intro">
-                            {pipe(
-                              networks,
-                              A.map(({ id, description, coverageSignals }) => {
-                                const isSelected = pipe(
-                                  O.fromNullable(loaderData.network),
-                                  O.map((_) => _.id == id),
-                                  O.getOrElse(() => false)
-                                );
-
-                                return (
-                                  <li key={id}>
-                                    <details
-                                      {...(isSelected && { open: true })}
-                                      className={clsx(
-                                        "space-y-4",
-                                        styles.network
-                                      )}
-                                      onToggle={(e) => {
-                                        const { open } =
-                                          e.target as HTMLDetailsElement;
-
-                                        if (open && !isSelected) {
-                                          setSearch((search) => {
-                                            search.set(
-                                              "network",
-                                              id.toString()
-                                            );
-                                            search.set("ua", "true");
-
-                                            if (markerLatlng) {
-                                              search.set(
-                                                "p",
-                                                `${markerLatlng.lat},${markerLatlng.lng}`
-                                              );
-                                            }
-                                            return search;
-                                          });
-                                        } else if (!open && isSelected) {
-                                          setSearch((search) => {
-                                            search.delete("network");
-                                            search.delete("ua");
-                                            search.delete("p");
-                                            return search;
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      <summary
-                                        className={clsx(
-                                          "bg-[var(--brand)] p-2 rounded-md",
-                                          styles.network_summary
-                                        )}
-                                      >
-                                        <h2 className="inline-block mx-1">
-                                          <strong>{description}</strong>
-                                        </h2>
-                                      </summary>
-
-                                      <div>
-                                        {/* hack to get the enter and exit animations to work */}
-                                        {isSelected ? (
-                                          <motion.div
-                                            initial={{ height: 0 }}
-                                            animate={{ height: "auto" }}
-                                            className="space-y-4 p-4 bg-white rounded-md border-2 border-[color:var(--brand)] relative overflow-hidden"
-                                          >
-                                            <p>Network Strength</p>
-
-                                            <Divider />
-
-                                            <div className="pt-8 space-y-3">
-                                              <ul
-                                                className={clsx(
-                                                  "coverage-strengths-intro",
-                                                  styles.coverage_levels
-                                                )}
-                                              >
-                                                {sortCoverageSignals(
-                                                  coverageSignals
-                                                ).map(
-                                                  (
-                                                    { colour, ...signal },
-                                                    i
-                                                  ) => {
-                                                    const isSelectedSignal =
-                                                      loaderData.coverageSignal
-                                                        ? pipe(
-                                                            loaderData.coverageSignal,
-                                                            O.match({
-                                                              onNone:
-                                                                constFalse,
-                                                              onSome: (_) =>
-                                                                isSelected &&
-                                                                _.toLowerCase() ===
-                                                                  signal.signalClass.toLowerCase(),
-                                                            })
-                                                          )
-                                                        : false;
-
-                                                    return (
-                                                      <li
-                                                        key={i}
-                                                        style={{
-                                                          backgroundColor:
-                                                            colour,
-                                                        }}
-                                                        title={
-                                                          signal.description ??
-                                                          signal.signalClass
-                                                        }
-                                                        className={clsx(
-                                                          styles.coverage_level,
-                                                          {
-                                                            [styles[
-                                                              "coverage_level--selected"
-                                                            ]]:
-                                                              isSelectedSignal,
-                                                          }
-                                                        )}
-                                                      />
-                                                    );
-                                                  }
-                                                )}
-                                              </ul>
-
-                                              <div className="flex items-center justify-between space-x-2">
-                                                <span>Low</span>
-                                                <span>Excellent</span>
-                                              </div>
-                                            </div>
-
-                                            <Divider />
-
-                                            <Button
-                                              as={Link}
-                                              size="sm"
-                                              className="w-full"
-                                              to={`/?tab=${Tab.stores}&searchType=${SearchType.nearest}&p=${lat},${lng}`}
-                                            >
-                                              Find nearest Stores
-                                            </Button>
-
-                                            <Button
-                                              as={Link}
-                                              size="sm"
-                                              className="w-full"
-                                              to={`/?tab=${Tab.stores}&searchType=${SearchType.nearest}&variant=${Variant.momoAgent}&p=${lat},${lng}`}
-                                            >
-                                              Find nearest MoMo Agents
-                                            </Button>
-                                          </motion.div>
-                                        ) : null}
-                                      </div>
-                                    </details>
-                                  </li>
-                                );
-                              })
-                            )}
-                          </ul>
-                        );
-                      },
-                    }),
-                  })
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {showInternalTools ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      leftIcon={<BiUserCircle size={20} />}
-                      onClick={() => {
-                        Effect.runSync(
-                          pipe(
-                            invalidate(),
-                            Effect.tap(() =>
-                              Effect.sync(() =>
-                                navigate("/login", { replace: true })
-                              )
-                            ),
-                            Effect.provideLayer(SessionStorageLive)
-                          )
-                        );
-                      }}
-                    >
-                      Logout
-                    </Button>
-
-                    <Button
-                      as="a"
-                      href={helpDoc}
-                      target="_blank"
-                      className="w-full"
-                      rel="noopener noreferrer"
-                      leftIcon={<IoHelp size={20} />}
-                    >
-                      Help
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
           {tab === Tab.stores ? (
             <div className="flex-1 space-y-4 py-2 px-4">
-              <Button
-                as="a"
-                size="sm"
-                variant="outline"
-                colorScheme="blue"
-                href={eShopUrl}
-                target="_blank"
-                className="w-full"
-                rel="noopener noreferrer"
-              >
-                Go to e-shop
-              </Button>
-
               <div className="flex items-center justify-between">
                 <h5 className="font-semibold">Overview</h5>
 
@@ -2118,7 +1807,25 @@ export function Home() {
                   onNone: () =>
                     navigation.state === "loading" ? <Loader /> : null,
                   onSome: E.match({
-                    onLeft: () => <LoadError />,
+                    onLeft: (error) => {
+                      return (
+                        <>
+                          {error.message === undefined ? (
+                            <motion.div  initial={{ scale: 0 }}
+                            animate={{ rotate: 360, scale: 1 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 260,
+                              damping: 20
+                            }} className="h-full m-auto items-center space-y-2 flex justify-center">
+                              <p className="text-lg">Make a search first!</p>
+                            </motion.div>
+                          ) : (
+                            <LoadError />
+                          )}
+                        </>
+                      );
+                    },
                     onRight: (stores) => {
                       return (
                         <>
@@ -2210,9 +1917,9 @@ export function Home() {
                                   key={id}
                                   id={id?.toString()}
                                   className={clsx(
-                                    "p-4 space-y-1 font-medium bg-yellow-50 border-2 border-[color:var(--brand)] rounded-md cursor-pointer",
+                                    "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand)] rounded-md cursor-pointer",
                                     {
-                                      ["border-yellow-600"]: pipe(
+                                      ["border-blue-600"]: pipe(
                                         store,
                                         O.match({
                                           onNone: constFalse,
@@ -2269,6 +1976,39 @@ export function Home() {
                 })
               )}
             </div>
+          ) : null}
+        </div>
+        <div className="flex justify-between  px-4">
+          {showInternalTools ? (
+            <>
+              <Button
+                variant="outline"
+                leftIcon={<BiUserCircle size={20} />}
+                onClick={() => {
+                  Effect.runSync(
+                    pipe(
+                      invalidate(),
+                      Effect.tap(() =>
+                        Effect.sync(() => navigate("/login", { replace: true }))
+                      ),
+                      Effect.provideLayer(SessionStorageLive)
+                    )
+                  );
+                }}
+              >
+                Logout
+              </Button>
+
+              <Button
+                as="a"
+                href={helpDoc}
+                target="_blank"
+                rel="noopener noreferrer"
+                leftIcon={<IoHelp size={20} />}
+              >
+                Help
+              </Button>
+            </>
           ) : null}
         </div>
       </div>

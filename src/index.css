@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --brand: #7a97ff;
+ /* --brand: #7a97ff; */
+  --brand: #0b99ff;
 
 /*  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;*/
   line-height: 1.5;

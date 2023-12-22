@@ -26,7 +26,7 @@ export function Direction({
 
 						<Polyline
 							weight={7}
-							color="#ffbe00"
+							color="#0b99ff"
 							positions={
 								route.polyline.geoJsonLinestring.coordinates
 							}

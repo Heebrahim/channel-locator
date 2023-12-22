@@ -8,6 +8,9 @@ import { FeatureCollection, Geometry } from "geojson";
 export enum Variant {
   store = "store",
   momoAgent = "momo",
+  branches = "branch",
+  posStand = "pos"
+  
 }
 
 export type Stores = FeatureCollection<Geometry, unknown>;

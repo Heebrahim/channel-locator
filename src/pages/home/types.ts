@@ -1,6 +1,8 @@
 export enum Tab {
   stores = "stores",
-  coverages = "coverages",
+  branches = "branches",
+  posStands = "pos",
+  atmStands = "atm"
 }
 
 export enum SearchType {

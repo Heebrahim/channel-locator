@@ -11,6 +11,10 @@ const stores_mapName = "/COVERAGES/NamedMaps/MTNN Walk-in Shops";
 
 const momoAgents_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
 
+const branches_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
+
+const POS_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
+
 export const StoreRepositoryLive = Layer.effect(
   StoreRepository,
   Effect.gen(function* (_) {

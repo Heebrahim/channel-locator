@@ -1,10 +1,10 @@
-# MTNN Coverage Locator
+# Stanbic Locator
 
 ## Contributing
 
 ### Getting started
 ```bash
-git clone https://github.com/polarisdigitech/mtn-coverage-locator.git
+git clone https://github.com/polarisdigitech/stanbic-locator.git
 cd mtn-coverage-locator
 pnpm i
 ```
@@ -19,8 +19,10 @@ pnpm dev
 
 ## Project folder structure
 
+
+
 .
-└── mtn-coverage-locator/
+└── stanbic-locator/
     ├── public
     └── src/
         ├── common
@@ -48,10 +50,3 @@ pnpm dev
 
 ## Deployment
 
-Provider - [Firebase hosting](https://console.firebase.google.com/u/0/project/mtn-coverage-locator-vite/hosting/sites)
-
-```bash
-pnpm clean
-pnpm build
-firebase deploy
-```

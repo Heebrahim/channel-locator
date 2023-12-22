@@ -12,7 +12,6 @@ import * as Http from "http-kit";
 import * as HttpRes from "http-kit/response";
 
 import { SessionStorageLive } from "@/core/adapters/storage/implementation";
-import { CoverageSignal } from "@/core/models/coverage";
 import { DataLayer } from "@/core/models/data-layer";
 import { getAuthentication } from "@/core/services/authentication";
 import { createFeatureService } from "@/core/tags/spectrum";
@@ -23,7 +22,7 @@ import { RouteResponse, Tab } from "./types";
 export const isOnInternalUrl = window.location.href === internalAppUrl;
 
 export function isInternalUser() {
-  if (import.meta.env.DEV) return true;
+  //if (import.meta.env.DEV) return true;
 
   const auth = pipe(
     getAuthentication(),
@@ -185,8 +184,8 @@ export function getTab(str: string | null) {
   return pipe(
     O.fromNullable(str),
     O.filter(S.isNonEmpty),
-    O.filter((_) => _ == Tab.stores || _ == Tab.coverages),
-    O.getOrElse(() => Tab.coverages),
+    O.filter((_) => _ == Tab.stores || _ == Tab.branches),
+    O.getOrElse(() => Tab.stores),
   );
 }
 
@@ -256,16 +255,16 @@ export function nonNullable<T>(value: T): value is NonNullable<T> {
   return value !== null && value !== undefined;
 }
 
-const coverageSignalScale: Record<CoverageSignal["signalClass"], number> = {
-  LOW: 0,
-  MODERATE: 1,
-  GOOD: 2,
-  EXCELLENT: 3,
-};
+// const coverageSignalScale: Record<CoverageSignal["signalClass"], number> = {
+//   LOW: 0,
+//   MODERATE: 1,
+//   GOOD: 2,
+//   EXCELLENT: 3,
+// };
 
-export function sortCoverageSignals(signals: Array<CoverageSignal>) {
-  return signals.sort(
-    (a, b) =>
-      coverageSignalScale[a.signalClass] - coverageSignalScale[b.signalClass],
-  );
-}
+// export function sortCoverageSignals(signals: Array<CoverageSignal>) {
+//   return signals.sort(
+//     (a, b) =>
+//       coverageSignalScale[a.signalClass] - coverageSignalScale[b.signalClass],
+//   );
+// }
