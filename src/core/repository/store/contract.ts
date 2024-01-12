@@ -9,7 +9,7 @@ export enum Variant {
   store = "store",
   momoAgent = "momo",
   branches = "branch",
-  posStand = "pos"
+  pos = "pos"
   
 }
 
