@@ -13,28 +13,41 @@ function extractData(variant: Variant) {
     ...data,
     properties: {
       id: data.id as any,
-      address: data.properties.Address ?? "",
-      color: data.properties.Colour_Scheme ?? "#ffc403",
+      address: 
+        variant === Variant.branch
+          ? data.properties.Address
+          : variant === Variant.pos
+          ? data.properties.Address_li
+          : data.properties.Address,
+      color: data.properties.Colour_Scheme ?? "#0b99ff",
       latitude:
-        variant === Variant.store
+        variant === Variant.branch
           ? data.properties.Latitude
-          : data.properties.Latitutde,
+          : variant === Variant.pos
+          ? data.properties.Latitude
+          : data.properties.Latitude,
       longitude:
-        variant === Variant.store
+        variant === Variant.branch
+          ? data.properties.Longitude
+          : variant === Variant.pos
           ? data.properties.Longitude
           : data.properties.Longitutde,
       lga: data.properties.LGA ?? "",
-      name:
-        variant === Variant.store
-          ? data.properties.New_Shop_Name
-          : data.properties.Name,
+      branch_name:
+        variant === Variant.branch
+          ? data.properties.Branch_nam
+          : variant === Variant.pos
+          ? data.properties.Agent_name
+          : data.properties.branch_nam,
+
       region: data.properties.Region ?? "",
+
       state: data.properties.State ?? "",
       tel:
-        variant === Variant.store
+        variant === Variant.branch
           ? data.properties.Supervisors_MSISDN
           : `+234 ${data.properties.Msisdn}`,
-      type: variant === Variant.store ? data.properties.Type : "",
+      type: variant === Variant.branch ? data.properties.Type : "",
     },
   };
 }

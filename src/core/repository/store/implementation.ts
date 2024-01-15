@@ -11,9 +11,13 @@ const stores_mapName = "/COVERAGES/NamedMaps/MTNN Walk-in Shops";
 
 const momoAgents_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
 
-const branches_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
+const branches_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_Stanbic_BANK_ADDRESS";
 
-const POS_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
+const POS_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_POS_ready_agents";
+
+const customers_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_Ward Nigeria Pop Stanbic";
+
+
 
 export const StoreRepositoryLive = Layer.effect(
   StoreRepository,
@@ -27,7 +31,10 @@ export const StoreRepositoryLive = Layer.effect(
             catch: (e) => new SpectrumError(e),
             try: () =>
               service.searchNearest(
-                variant === Variant.store ? stores_mapName : momoAgents_mapName,
+                variant === Variant.branch 
+                ? branches_mapName 
+                :variant === Variant.pos 
+                ? POS_mapName : customers_mapName,
                 { type: "Point", coordinates: [1, 2] },
                 { withinDistance: "50000000 mi", maxFeatures: "1000" }
               ),
@@ -41,7 +48,7 @@ export const StoreRepositoryLive = Layer.effect(
             catch: (e) => new SpectrumError(e),
             try: () =>
               service.searchNearest(
-                variant === Variant.store ? stores_mapName : momoAgents_mapName,
+                variant === Variant.branch ? branches_mapName : POS_mapName,
                 { type: "Point", coordinates: [lng, lat] },
                 { withinDistance: "5000 mi", maxFeatures: "5" }
               ),

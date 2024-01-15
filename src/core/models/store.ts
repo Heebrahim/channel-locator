@@ -4,7 +4,7 @@ export const Store = S.struct({
 	id: S.number,
 	tel: S.number,
 	lga: S.string,
-	name: S.string,
+	branch_name: S.string,
 	type: S.string,
 	color: S.string,
 	state: S.string,

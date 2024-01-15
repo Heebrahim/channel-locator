@@ -8,8 +8,9 @@ import { FeatureCollection, Geometry } from "geojson";
 export enum Variant {
   store = "store",
   momoAgent = "momo",
-  branches = "branch",
-  pos = "pos"
+  branch = "branch",
+  pos = "pos",
+  customer = "customer"
   
 }
 

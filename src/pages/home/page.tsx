@@ -17,6 +17,7 @@ import Tour from "reactour";
 
 import {
   FormEvent,
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -371,7 +372,6 @@ export function Home() {
         const result = yield* _(
           computeRoute({ to, from, routeMask, apiKey: googleMapsApiKey })
         );
-
 
         return result.routes.map((route) => {
           const polyline = route.polyline;
@@ -834,17 +834,17 @@ export function Home() {
                             <div className="flex-1 space-y-1">
                               <h5>
                                 <strong>
-                                  {storeVariant === Variant.store
+                                  {storeVariant === Variant.branch
                                     ? "Address"
-                                    : "Tel"}
+                                    : "Address"}
                                 </strong>
                               </h5>
 
                               <p>
                                 <strong>
-                                  {storeVariant === Variant.store
+                                  {storeVariant === Variant.branch
                                     ? props.address
-                                    : props.tel}
+                                    : props.address}
                                 </strong>
                               </p>
                             </div>
@@ -862,7 +862,7 @@ export function Home() {
                           </div>
 
                           <div className="space-y-2">
-                            {storeVariant === Variant.store ? (
+                            {/* {storeVariant === Variant.store ? (
                               <Button
                                 as="a"
                                 size="sm"
@@ -873,7 +873,7 @@ export function Home() {
                               >
                                 Book Appointment
                               </Button>
-                            ) : null}
+                            ) : null} */}
 
                             <Button
                               size="sm"
@@ -895,7 +895,9 @@ export function Home() {
                       </Popup>
 
                       <Tooltip>
-                        <p>{props.name}</p>
+                        {storeVariant === Variant.branch ? (
+                          <p>{props.branch_name}</p>
+                        ) : null}
                         <p>{props.address}</p>
                       </Tooltip>
                     </Marker>
@@ -1351,7 +1353,7 @@ export function Home() {
     if (navigation.state === "idle") {
       if (directionQuery.data && E.isRight(directionQuery.data)) {
         const route = directionQuery.data.right[0];
-        console.log(route)
+        console.log(route);
 
         if (route) {
           const feature = L.polyline(
@@ -1717,10 +1719,10 @@ export function Home() {
             as={Link}
             size="sm"
             className={styles.tab}
-            to={`/?${storeURLSearch}&variant=${Variant.store}`}
+            to={`/?${storeURLSearch}&variant=${Variant.branch}`}
             leftIcon={<IoStorefront />}
             variant={
-              tab === Tab.stores && storeVariant === Variant.store
+              tab === Tab.stores && storeVariant === Variant.branch
                 ? "solid"
                 : "outline"
             }
@@ -1732,10 +1734,10 @@ export function Home() {
             as={Link}
             size="sm"
             className={styles.tab}
-            leftIcon={<IoWifi />}
-            to={`/?${storeURLSearch}&variant=${Variant.posStand}`}
+            leftIcon={<IoPeople />}       
+            to={`/?${storeURLSearch}&variant=${Variant.pos}`}
             variant={
-              tab === Tab.stores && storeVariant === Variant.posStand
+              tab === Tab.stores && storeVariant === Variant.pos
                 ? "solid"
                 : "outline"
             }
@@ -1743,20 +1745,20 @@ export function Home() {
             POS Agents
           </Button>
 
-          <Button
+          {/* <Button
             as={Link}
             size="sm"
             className={styles.tab}
             leftIcon={<IoPeople />}
-            to={`/?${storeURLSearch}&variant=${Variant.momoAgent}`}
+            to={`/?${storeURLSearch}&variant=${Variant.customer}`}
             variant={
-              tab === Tab.stores && storeVariant === Variant.momoAgent
+              tab === Tab.stores && storeVariant === Variant.customer
                 ? "solid"
                 : "outline"
             }
           >
             ATM Stands
-          </Button>
+          </Button> */}
         </div>
 
         <div className="flex-1 flex flex-col overflow-y-auto">
@@ -1811,13 +1813,16 @@ export function Home() {
                       return (
                         <>
                           {error.message === undefined ? (
-                            <motion.div  initial={{ scale: 0 }}
-                            animate={{ rotate: 360, scale: 1 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 260,
-                              damping: 20
-                            }} className="h-full m-auto items-center space-y-2 flex justify-center">
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ rotate: 360, scale: 1 }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 260,
+                                damping: 20,
+                              }}
+                              className="h-full m-auto items-center space-y-2 flex justify-center"
+                            >
                               <p className="text-lg">Make a search first!</p>
                             </motion.div>
                           ) : (
@@ -1829,7 +1834,7 @@ export function Home() {
                     onRight: (stores) => {
                       return (
                         <>
-                          {storeVariant === Variant.store
+                          {storeVariant === Variant.branch
                             ? pipe(
                                 storeTypes,
                                 O.map((_) => [...Object.values(_)]),
@@ -1854,52 +1859,7 @@ export function Home() {
                                           });
                                         }}
                                       >
-                                        <ul className="space-y-2">
-                                          <li>
-                                            <label className="flex items-center justify-between">
-                                              <div className="flex items-center space-x-1.5">
-                                                <BiGridAlt size={20} />
-
-                                                <span className="align-middle">
-                                                  See all <i>({total})</i>
-                                                </span>
-                                              </div>
-
-                                              <Radio
-                                                name="store-type"
-                                                value=""
-                                              />
-                                            </label>
-                                          </li>
-
-                                          {types.map((t) => {
-                                            return (
-                                              <li key={t.type}>
-                                                <label className="flex items-center justify-between">
-                                                  <span className="space-x-1.5">
-                                                    <span
-                                                      style={{
-                                                        backgroundColor:
-                                                          t.color,
-                                                      }}
-                                                      className="w-4 h-4 inline-block align-middle rounded-sm"
-                                                    />
-
-                                                    <span className="align-middle">
-                                                      {t.type}{" "}
-                                                      <i>({t.total})</i>
-                                                    </span>
-                                                  </span>
-
-                                                  <Radio
-                                                    value={t.type}
-                                                    name="store-type"
-                                                  />
-                                                </label>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
+                                        <Radio></Radio>
                                       </RadioGroup>
                                     );
                                   },
@@ -1941,7 +1901,7 @@ export function Home() {
                                   }}
                                 >
                                   <h4 className="font-medium text-xl">
-                                    {props.name}
+                                    {props.branch_name}
                                   </h4>
 
                                   <h6
@@ -1951,13 +1911,8 @@ export function Home() {
                                     {props.type}
                                   </h6>
 
-                                  <div className="text-sm space-y-2">
-                                    {storeVariant === Variant.store ? (
-                                      <p>Address: {props.address}</p>
-                                    ) : (
-                                      <p>Tel: {props.tel}</p>
-                                    )}
-
+                                  <div className="text-sm space-y-2">                             
+                                    <p>Address: {props.address}</p>
                                     {loaderData.latlng ? (
                                       <DistanceBetween
                                         end={{ lat, lng }}
