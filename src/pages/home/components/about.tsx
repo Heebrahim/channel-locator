@@ -26,7 +26,7 @@ export function About({ type, ...props }: Props) {
 
       <ModalContent
         className="!bg-no-repeat !bg-cover !bg-[#1E90FF]"
-        style={{ backgroundImage: "url(/intro.jpg)" }}     
+        //style={{ backgroundImage: "url(/intro.jpg)" }}     
       >
         <ModalHeader className="!max-w-[65%]">
           <h1 className="text-5xl font-bold">Stanbic!</h1>

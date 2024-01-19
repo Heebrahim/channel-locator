@@ -37,7 +37,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const variant = pipe(
     O.fromNullable(search.get("variant")),
     O.filter(S.isNonEmpty),
-    O.getOrElse(() => Variant.store)
+    O.getOrElse(() => Variant.branch)
   ) as Variant;
 
   const storesProgram = pipe(
