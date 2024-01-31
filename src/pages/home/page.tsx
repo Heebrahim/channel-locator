@@ -17,7 +17,6 @@ import Tour from "reactour";
 
 import {
   FormEvent,
-  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -44,6 +43,7 @@ import { EditControl } from "react-leaflet-draw";
 
 import {
   computeRoute,
+  createBranchIcon,
   createStoreIcon,
   defaultCenter,
   defaultZoom,
@@ -106,7 +106,6 @@ import styles from "./style.module.css";
 import { DataLayer } from "@/core/models/data-layer";
 import { DataLayerControl } from "./components/controls/data-layer";
 import { DistanceBetween } from "./components/distance";
-import { appointmentBookingUrl } from "./env";
 import { DrawEvent, SearchType, Tab } from "./types";
 
 import { helpDoc } from "./env";
@@ -783,7 +782,10 @@ export function Home() {
 
                   const { color, ...props } = properties;
 
-                  const icon = createStoreIcon(color);
+                  const icon =
+                    tab === Tab.stores && storeVariant === Variant.pos
+                      ? createStoreIcon(color)
+                      : createBranchIcon(color);
 
                   const map = mapRef.current;
 
@@ -1734,7 +1736,7 @@ export function Home() {
             as={Link}
             size="sm"
             className={styles.tab}
-            leftIcon={<IoPeople />}       
+            leftIcon={<IoPeople />}
             to={`/?${storeURLSearch}&variant=${Variant.pos}`}
             variant={
               tab === Tab.stores && storeVariant === Variant.pos
@@ -1911,7 +1913,7 @@ export function Home() {
                                     {props.type}
                                   </h6>
 
-                                  <div className="text-sm space-y-2">                             
+                                  <div className="text-sm space-y-2">
                                     <p>Address: {props.address}</p>
                                     {loaderData.latlng ? (
                                       <DistanceBetween
@@ -1995,4 +1997,3 @@ export function Home() {
     </>
   );
 }
- 

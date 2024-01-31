@@ -7,15 +7,12 @@ import { FeatureService } from "@/core/tags/spectrum";
 import { filterSpectrumResult } from "../utils";
 import { SpectrumError } from "@/core/exceptions/spectrum";
 
-const stores_mapName = "/COVERAGES/NamedMaps/MTNN Walk-in Shops";
 
-const momoAgents_mapName = "/COVERAGES/NamedMaps/MOMO_MTN";
+const branches_mapName = "/STANBIC/NamedMaps/BANK_ADDRESS";
 
-const branches_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_Stanbic_BANK_ADDRESS";
+const POS_mapName = "/STANBIC/NamedMaps/POS_ready_agents";
 
-const POS_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_POS_ready_agents";
-
-const customers_mapName = "/STANBIC/NamedMaps/stabic_Stanbic_Ward Nigeria Pop Stanbic";
+const customers_mapName = "/STANBIC/NamedMaps/Ward Nigeria Pop Stanbic";
 
 
 
