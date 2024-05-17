@@ -88,13 +88,17 @@ import clsx from "clsx";
 
 import { BiGridAlt, BiLocationPlus, BiUserCircle } from "react-icons/bi";
 
-import { IoHelp, IoPeople, IoStorefront, IoWifi } from "react-icons/io5";
+import { IoHelp, IoPeople, IoStorefront, IoWifi, IoAdd, IoRemove } from "react-icons/io5";
 
 import {
+  Box,
   Button,
   Center,
   Checkbox,
+  Collapse,
   Divider,
+  Flex,
+  Icon,
   Radio,
   RadioGroup,
   Spinner,
@@ -229,6 +233,8 @@ export function Home() {
     [search]
   );
 
+  console.log(loaderData);
+
   const searchType = useMemo(
     () =>
       pipe(O.fromNullable(search.get("searchType")), O.filter(S.isNonEmpty)),
@@ -285,25 +291,25 @@ export function Home() {
     );
   }, [storeType, stores]);
 
-  const storeTypes = useMemo(() => {
-    type Groups = Record<
-      string,
-      { type: string; color: string; total: number }
-    >;
+  // const storeTypes = useMemo(() => {
+  //   type Groups = Record<
+  //     string,
+  //     { type: string; color: string; total: number }
+  //   >;
 
-    return pipe(
-      stores,
-      O.flatMap((_) => pipe(_, E.getOrNull, O.fromNullable)),
-      O.map((_) => _.features),
-      O.map(
-        A.reduceRight({} as Groups, (acc, { properties: { type, color } }) => {
-          const { total = 0 } = acc[type] ?? {};
-          acc[type] = { type, color, total: total + 1 };
-          return acc;
-        })
-      )
-    );
-  }, [stores]);
+  //   return pipe(
+  //     stores,
+  //     O.flatMap((_) => pipe(_, E.getOrNull, O.fromNullable)),
+  //     O.map((_) => _.features),
+  //     O.map(
+  //       A.reduceRight({} as Groups, (acc, { properties: { type, color } }) => {
+  //         const { total = 0 } = acc[type] ?? {};
+  //         acc[type] = { type, color, total: total + 1 };
+  //         return acc;
+  //       })
+  //     )
+  //   );
+  // }, [stores]);
 
   const toast = useToast();
 
@@ -560,7 +566,7 @@ export function Home() {
             const latlng = new L.LatLng(lat, lng);
 
             setLatLng(latlng);
-            map?.flyTo(latlng, 16);
+            map?.flyTo(latlng, 18);
 
             setSearch((search) => {
               search.set("p", `${lat},${lng}`);
@@ -582,7 +588,7 @@ export function Home() {
 
       setLatLng(latlng);
 
-      map?.flyTo(latlng, 16);
+      map?.flyTo(latlng, 18);
 
       setSearch((search) => {
         search.set("p", `${lat},${lng}`);
@@ -604,7 +610,7 @@ export function Home() {
 
           setLatLng(latlng);
 
-          map?.flyTo(latlng, 16);
+          map?.flyTo(latlng, 18);
 
           setSearch((search) => {
             search.set("p", `${latitude},${longitude}`);
@@ -646,7 +652,7 @@ export function Home() {
 
       let radius = 0;
 
-      if (zoom > 16) {
+      if (zoom > 18) {
         radius = 10;
       } else if (zoom > 14) {
         radius = 50;
@@ -810,7 +816,7 @@ export function Home() {
                               id.toString()
                             );
 
-                            map?.flyTo([lat, lng], 16);
+                            map?.flyTo([lat, lng], 18);
                           }
                         },
                       }}
@@ -1205,15 +1211,6 @@ export function Home() {
                         );
                       })}
                     </ul>
-
-                    <a
-                      target="_blank"
-                      className="inline-block"
-                      rel="noopener noreferrer"
-                      href={`https://storage.googleapis.com/cov-public/${layer.title}.pdf`}
-                    >
-                      Description info
-                    </a>
                   </div>
                 </Popup>
               );
@@ -1465,6 +1462,18 @@ export function Home() {
     },
   ];
 
+  const [isSelected, setIsSelected] = useState(null);
+
+  const lists = [
+    { id: 1, name: "Branches", icon: IoStorefront },
+    { id: 2, name: "POS Agents", icon: IoStorefront },
+    { id: 3, name: "ATM", icon: IoStorefront },
+  ];
+
+  const toggle = (id) => {
+    setIsSelected(isSelected === id ? null : id);
+  }
+
   return (
     <>
       <main className="h-full flex flex-col">
@@ -1705,8 +1714,8 @@ export function Home() {
           />
         </div>
 
-        <div className="px-4 flex flex-wrap gap-2">
-          {/* <Button
+        {/* <div className="px-4 flex flex-col gap-2">
+       <Button
             as={Link}
             size="sm"
             className={styles.tab}
@@ -1715,7 +1724,7 @@ export function Home() {
             variant={tab === Tab.coverages ? "solid" : "outline"}
           >
             Coverages
-          </Button> */}
+          </Button>
 
           <Button
             as={Link}
@@ -1724,7 +1733,8 @@ export function Home() {
             to={`/?${storeURLSearch}&variant=${Variant.branch}`}
             leftIcon={<IoStorefront />}
             variant={
-              tab === Tab.stores && storeVariant === Variant.branch
+              (tab === Tab.stores && storeVariant === Variant.store) ||
+              storeVariant === Variant.branch
                 ? "solid"
                 : "outline"
             }
@@ -1747,7 +1757,7 @@ export function Home() {
             POS Agents
           </Button>
 
-          {/* <Button
+          <Button
             as={Link}
             size="sm"
             className={styles.tab}
@@ -1760,12 +1770,80 @@ export function Home() {
             }
           >
             ATM Stands
-          </Button> */}
+          </Button>
+        </div> */}
+
+        <div className="flex flex-col overflow-y-auto">
+          <div className="flex-1 flex flex-col p-4 space-y-4">
+            <div className="flex-1 
+            overflow-y-auto">
+
+              { lists.map(list => {
+                return (
+                  <Box key={list.id} mb={2} className="space-y-2" >
+                    <Flex className="space-between">
+                    <Button
+                          // as={Link}
+                          size="sm"
+                          onClick={() => {
+                            toggle(list.id)
+                          }}
+                          className={clsx("w-full justify-start")}
+                          leftIcon={<Icon as={list.icon} />}
+                          variant={ isSelected === list.id ? "solid" : "outline"}
+                         
+                          // to= { list.name === "branches" ? `/?${storeURLSearch}&variant=${Variant.customer}` : list.name === "POS Agents" ? `/?${storeURLSearch}&variant=${Variant.customer}` : `/?${storeURLSearch}&variant=${Variant.customer}` }
+                          // variant={
+                          //   tab === Tab.stores && storeVariant === Variant.customer
+                          //     ? "solid"
+                          //     : "outline"
+                          // }
+                        >
+                        {list.name}
+                     
+                        </Button>
+                        <Icon as={isSelected === list.id ? IoRemove : IoAdd} />
+
+                    </Flex>
+
+
+                        <Collapse in={isSelected === list.id} animateOpacity>
+                        <Button size="sm" variant="ghost" className="">
+                          Competition
+                        </Button>
+                      </Collapse>
+                  </Box>
+              )
+              })}
+
+
+
+              {/* <Button
+                as={Link}
+                size="sm"
+                className={clsx("space-y-4", styles.network)}
+                leftIcon={<IoPeople />}
+                to={`/?${storeURLSearch}&variant=${Variant.customer}`}
+                variant={
+                  tab === Tab.stores && storeVariant === Variant.customer
+                    ? "solid"
+                    : "outline"
+                }
+              >
+                ATM Stands
+              </Button>
+              <Collapse in={isSelected === tab.id} animateOpacity>
+                <Button size="sm" variant="ghost" className="mt-2 w-full">
+                  Competition
+                </Button>
+              </Collapse> */}
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col overflow-y-auto">
           {tab === Tab.stores ? (
-            <div className="flex-1 space-y-4 py-2 px-4">
+            <div className="flex-1  px-4">
               <div className="flex items-center justify-between">
                 <h5 className="font-semibold">Overview</h5>
 
@@ -1830,45 +1908,13 @@ export function Home() {
                           ) : (
                             <LoadError />
                           )}
+                          {/* <LoadError /> */}
                         </>
                       );
                     },
                     onRight: (stores) => {
                       return (
                         <>
-                          {storeVariant === Variant.branch
-                            ? pipe(
-                                storeTypes,
-                                O.map((_) => [...Object.values(_)]),
-                                O.match({
-                                  onNone: constNull,
-                                  onSome: (types) => {
-                                    const total = types.reduce(
-                                      (acc, _) => acc + _.total,
-                                      0
-                                    );
-
-                                    return (
-                                      <RadioGroup
-                                        className="font-bold"
-                                        defaultValue={O.getOrUndefined(
-                                          storeType
-                                        )}
-                                        onChange={(type) => {
-                                          setSearch((search) => {
-                                            search.set("type", type);
-                                            return search;
-                                          });
-                                        }}
-                                      >
-                                        <Radio></Radio>
-                                      </RadioGroup>
-                                    );
-                                  },
-                                })
-                              )
-                            : null}
-
                           <ul className="space-y-4">
                             {stores.map(({ id, properties: props }) => {
                               const lat = props.latitude;

@@ -13,11 +13,12 @@ import * as Layer from "@effect/io/Layer";
 import { LoaderFunctionArgs } from "react-router-dom";
 
 import { HttpClientLiveNoAuth } from "@/common/http-client";
-import { getFeatureService, getTab, parseLatLng } from "./utils";
+import { getFeatureService, getTab, isInternalUser, parseLatLng } from "./utils";
 import { SearchType, Tab } from "./types";
 
 const layer = StoreRepositoryLive.pipe(
   Layer.useMerge(HttpClientLiveNoAuth),
+  Layer.useMerge(StoreRepositoryLive),
   Layer.useMerge(getFeatureService())
 );
 
@@ -40,6 +41,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
     O.getOrElse(() => Variant.branch)
   ) as Variant;
 
+  const storePro = Effect.gen (function* (_){
+    const stores1 = yield* _(StoreService.getStores(variant))
+    return stores1
+  }).pipe(Effect.provideLayer(layer), Effect.either)
+
   const storesProgram = pipe(
     searchType,
     O.match({
@@ -57,15 +63,37 @@ export async function loader({ request }: LoaderFunctionArgs) {
     })
   );
 
+  
+  // const defaultSearchType = isInternalUser() ? SearchType.all : SearchType.nearest;
+
+
+  // const storesProgram = pipe(
+  //   O.fromNullable(search.get("searchType")),
+  //   O.getOrElse(() => defaultSearchType), 
+  //   (searchType) => {
+  //     return pipe(
+  //       searchType === SearchType.nearest && parseLatLng(search.get("p"))
+  //         ? Effect.flatMap(parseLatLng(search.get("p")), (latlng) =>
+  //             StoreService.getNearestStores(latlng, variant)
+  //           )
+  //         : StoreService.getStores(variant),
+  //       Effect.provideLayer(layer),
+  //       Effect.either
+  //     );
+  //   }
+  // );
+
   const result = await Effect.runPromise(
     Effect.all({
-      stores: tab === Tab.stores ? storesProgram : Effect.succeed(null),
+      stores:tab === Tab.stores ? storesProgram : Effect.succeed(null),
+      //branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
     })
   );
 
 
   return {
     ...result,
-    latlng: O.getOrNull(latlng),
+   // stores: result.stores,
+    latlng: O.getOrNull(latlng),   
   };
 }

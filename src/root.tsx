@@ -28,6 +28,10 @@ export function Root() {
     );
   }, [location.pathname]); // We use the pathname to ensure that this runs everytime the route changes
 
+  if(Either.isLeft(auth)) {
+    return <Navigate to="/login" />
+  }
+
   if (window.location.href === internalApp) {
     if (Either.isLeft(auth)) {
       return <Navigate state={{ from: location }} replace to="/login" />;
@@ -37,6 +41,7 @@ export function Root() {
       );
     }
   }
+
 
   return (
     <>

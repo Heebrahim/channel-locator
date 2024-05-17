@@ -1,11 +1,11 @@
-# Stanbic Locator
+# Channel Locator
 
 ## Contributing
 
 ### Getting started
 ```bash
-git clone https://github.com/polarisdigitech/stanbic-locator.git
-cd mtn-coverage-locator
+git clone https://github.com/polarisdigitech/channel-locator.git
+cd channel-locator
 pnpm i
 ```
 
@@ -18,11 +18,8 @@ pnpm dev
 ```
 
 ## Project folder structure
-
-
-
 .
-└── stanbic-locator/
+└── channel-locator/
     ├── public
     └── src/
         ├── common

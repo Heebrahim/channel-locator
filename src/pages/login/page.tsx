@@ -101,16 +101,17 @@ export function Login() {
 
   return (
     <div
-      style={{ backgroundImage: "url(login.png)" }}
+      style={{ backgroundImage: "url(bg.jpg)" }}
       className="h-screen bg-cover bg-center"
     >
       <div
-        className="h-full lg:p-12 p-4  bg-blue-500/50 backdrop-brightness-75"
+        //className="h-full lg:p-12 p-4  bg-blue-500/50 backdrop-brightness-75"
+        className="h-full lg:p-12 p-4  backdrop-brightness-75"
       >
         <main className="h-full flex items-center justify-center lg:w-2/5 ml-auto">
           <figure className="space-y-8 w-full bg-white rounded-md p-10">
             <figcaption className="space-y-10">
-              <img src="/stanbic-f.ico" className="mx-auto h-[4.5rem] w-[4rem]" />
+              <img src="/brand-icon.png" className="mx-auto h-[4.5rem] w-[4.5rem]" />
               <h1 className="text-4xl font-semibold">Login</h1>
             </figcaption>
 

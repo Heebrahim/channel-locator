@@ -8,7 +8,7 @@ import { filterSpectrumResult } from "../utils";
 import { SpectrumError } from "@/core/exceptions/spectrum";
 
 
-const branches_mapName = "/STANBIC/NamedMaps/BANK_ADDRESS";
+const branches_mapName = "/STANBIC/NamedMaps/Bank_Branches";
 
 const POS_mapName = "/STANBIC/NamedMaps/POS_ready_agents";
 

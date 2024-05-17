@@ -15,7 +15,7 @@ function extractData(variant: Variant) {
       id: data.id as any,
       address: 
         variant === Variant.branch
-          ? data.properties.Address
+          ? data.properties.Address_li
           : variant === Variant.pos
           ? data.properties.Address_li
           : data.properties.Address,
