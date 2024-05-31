@@ -85,15 +85,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const result = await Effect.runPromise(
     Effect.all({
-      stores:tab === Tab.stores ? storesProgram : Effect.succeed(null),
-      //branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
+      branches:tab === Tab.stores ? storesProgram : Effect.succeed(null),
+      // branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
     })
   );
 
 
   return {
     ...result,
-   // stores: result.stores,
+    // branches: result.branches,
     latlng: O.getOrNull(latlng),   
   };
 }

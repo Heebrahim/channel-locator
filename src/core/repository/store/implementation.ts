@@ -1,4 +1,5 @@
 import * as Effect from "@effect/io/Effect";
+import * as Either from "@effect/data/Either"
 import * as Layer from "@effect/io/Layer";
 import { pipe } from "@effect/data/Function";
 
@@ -6,20 +7,27 @@ import { Stores, Variant, StoreRepository } from "./contract";
 import { FeatureService } from "@/core/tags/spectrum";
 import { filterSpectrumResult } from "../utils";
 import { SpectrumError } from "@/core/exceptions/spectrum";
-
-
-const branches_mapName = "/STANBIC/NamedMaps/Bank_Branches";
-
-const POS_mapName = "/STANBIC/NamedMaps/POS_ready_agents";
-
-const customers_mapName = "/STANBIC/NamedMaps/Ward Nigeria Pop Stanbic";
-
+import { getAuth } from "@/common/authUtil";
 
 
 export const StoreRepositoryLive = Layer.effect(
   StoreRepository,
   Effect.gen(function* (_) {
     const service = yield* _(FeatureService);
+
+    const auth = getAuth()
+
+    Either.isRight(auth) ? console.log(auth.right.roles) : null
+
+
+    
+
+    const branches_mapName = `/CHANNELS/NamedMaps/FIRST_BANK`;
+
+    const POS_mapName = `/CHANNELS/NamedMaps/ZENITH_BANK`;
+
+    const ATM_mapName = `/CHANNELS/NamedMaps/UNION_BANK`;
+
 
     return {
       findAll(variant) {
@@ -31,7 +39,7 @@ export const StoreRepositoryLive = Layer.effect(
                 variant === Variant.branch 
                 ? branches_mapName 
                 :variant === Variant.pos 
-                ? POS_mapName : customers_mapName,
+                ? POS_mapName : ATM_mapName,
                 { type: "Point", coordinates: [1, 2] },
                 { withinDistance: "50000000 mi", maxFeatures: "1000" }
               ),
@@ -45,7 +53,10 @@ export const StoreRepositoryLive = Layer.effect(
             catch: (e) => new SpectrumError(e),
             try: () =>
               service.searchNearest(
-                variant === Variant.branch ? branches_mapName : POS_mapName,
+                variant === Variant.branch 
+                ? branches_mapName
+                :variant === Variant.pos  
+                ? POS_mapName : ATM_mapName,
                 { type: "Point", coordinates: [lng, lat] },
                 { withinDistance: "5000 mi", maxFeatures: "5" }
               ),

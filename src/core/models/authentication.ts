@@ -10,4 +10,5 @@ export const Authentication = S.struct({
   ),
 });
 
+
 export type Authentication = S.To<typeof Authentication>;

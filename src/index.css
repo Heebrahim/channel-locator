@@ -4,7 +4,11 @@
 
 :root {
  /* --brand: #7a97ff; */
-  --brand: #0b99ff;
+  /* --brand: #0b99ff; */
+
+  --brand: #283172;
+  --brand-light:  #7784e5;
+
 
 /*  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;*/
   line-height: 1.5;

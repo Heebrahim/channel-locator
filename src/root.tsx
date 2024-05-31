@@ -42,7 +42,6 @@ export function Root() {
     }
   }
 
-
   return (
     <>
       {navigation.state === "loading" && (

@@ -112,6 +112,7 @@
   border-bottom-right-radius: 0.3rem;
   transform: rotate(-90deg);
   bottom: calc(45% + 1.5rem);
+  color: white;
 }
 
 .side_bar_toggle__collapsed {

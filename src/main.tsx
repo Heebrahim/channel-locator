@@ -44,7 +44,9 @@ const theme = extendTheme({
         solid: {
           bg: "brand.900",
           rounded: 4,
+          color: "white",
         },
+        
         outline: {
           rounded: 4,
           borderColor: "gray.400",

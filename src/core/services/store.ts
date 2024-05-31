@@ -15,7 +15,7 @@ function extractData(variant: Variant) {
       id: data.id as any,
       address: 
         variant === Variant.branch
-          ? data.properties.Address_li
+          ? data.properties.BRANC_ADD
           : variant === Variant.pos
           ? data.properties.Address_li
           : data.properties.Address,
@@ -35,7 +35,7 @@ function extractData(variant: Variant) {
       lga: data.properties.LGA ?? "",
       branch_name:
         variant === Variant.branch
-          ? data.properties.Branch_nam
+          ? data.properties.BRANC_NAME
           : variant === Variant.pos
           ? data.properties.Agent_name
           : data.properties.branch_nam,

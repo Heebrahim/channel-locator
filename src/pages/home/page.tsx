@@ -246,8 +246,8 @@ export function Home() {
   const { lat, lng } = loaderData.latlng ?? defaultCenter;
 
   const stores = useMemo(
-    () => O.fromNullable(loaderData.stores),
-    [loaderData.stores]
+    () => O.fromNullable(loaderData.branches),
+    [loaderData.branches]
   );
 
   const store = useMemo(
@@ -789,9 +789,11 @@ export function Home() {
                   const { color, ...props } = properties;
 
                   const icon =
-                    tab === Tab.stores && storeVariant === Variant.pos
-                      ? createStoreIcon(color)
-                      : createBranchIcon(color);
+                    tab === Tab.stores && storeVariant === Variant.branch
+                      ? createStoreIcon(color) :
+                     tab === Tab.stores && storeVariant === Variant.pos
+                      ?  createStoreIcon(color) 
+                      : createBranchIcon(color)
 
                   const map = mapRef.current;
 
@@ -842,7 +844,7 @@ export function Home() {
                             <div className="flex-1 space-y-1">
                               <h5>
                                 <strong>
-                                  {storeVariant === Variant.branch
+                                  {storeVariant === Variant.atm
                                     ? "Address"
                                     : "Address"}
                                 </strong>
@@ -1147,6 +1149,8 @@ export function Home() {
     selectedDataLayers.length,
     setSearch,
   ]);
+
+
 
   const dataLayerPoint = useMemo(() => {
     return dataLayerTarget && dataLayerPointQuery.data
@@ -1455,7 +1459,6 @@ export function Home() {
     showInternalTools
       ? { selector: ".data-layers-intro", content: "Data layers" }
       : null,
-
     {
       selector: ".leaflet-control-zoom",
       content: "Zoom controls to adjust the map zoom level",
@@ -1465,9 +1468,9 @@ export function Home() {
   const [isSelected, setIsSelected] = useState(null);
 
   const lists = [
-    { id: 1, name: "Branches", icon: IoStorefront },
-    { id: 2, name: "POS Agents", icon: IoStorefront },
-    { id: 3, name: "ATM", icon: IoStorefront },
+    { id: 1, name: "Branches", icon: IoStorefront, tab: "branch"},
+    { id: 2, name: "POS Agents", icon: IoStorefront,  tab: "pos"},
+    { id: 3, name: "ATM", icon: IoStorefront, tab: "atm"},
   ];
 
   const toggle = (id) => {
@@ -1700,7 +1703,7 @@ export function Home() {
 
       <div
         className={clsx(
-          "py-4 space-y-4 left-0 right-0 h-[45%] lg:top-0 lg:w-[22%] lg:h-[unset]",
+          "py-4 space-y-4 left-0 right-0 h-[45%] lg:top-0 lg:w-[22%] lg:h-[unset] overflow-y-auto",
           styles.side_bar,
           { [styles.side_bar__hidden]: !showSideBar }
         )}
@@ -1773,50 +1776,53 @@ export function Home() {
           </Button>
         </div> */}
 
-        <div className="flex flex-col overflow-y-auto">
-          <div className="flex-1 flex flex-col p-4 space-y-4">
-            <div className="flex-1 
-            overflow-y-auto">
-
-              { lists.map(list => {
+        <div className="flex flex-col lg:overflow-y-auto">
+          <div className="flex-1 flex flex-col p-4 space-y-2">
+            <div
+              className="flex-1 
+            overflow-y-auto"
+            >
+              {lists.map((list) => {
                 return (
-                  <Box key={list.id} mb={2} className="space-y-2" >
-                    <Flex className="space-between">
+                  <Box key={list.id} mb={2} className="space-y-2">
                     <Button
-                          // as={Link}
-                          size="sm"
-                          onClick={() => {
-                            toggle(list.id)
-                          }}
-                          className={clsx("w-full justify-start")}
-                          leftIcon={<Icon as={list.icon} />}
-                          variant={ isSelected === list.id ? "solid" : "outline"}
-                         
-                          // to= { list.name === "branches" ? `/?${storeURLSearch}&variant=${Variant.customer}` : list.name === "POS Agents" ? `/?${storeURLSearch}&variant=${Variant.customer}` : `/?${storeURLSearch}&variant=${Variant.customer}` }
-                          // variant={
-                          //   tab === Tab.stores && storeVariant === Variant.customer
-                          //     ? "solid"
-                          //     : "outline"
-                          // }
-                        >
-                        {list.name}
-                     
-                        </Button>
+                      as={Link}
+                      size="sm"
+                      onClick={() => {
+                        toggle(list.id);
+                      }}
+                      className={clsx(
+                        "w-full flex justify-between items-center "
+                      )}
+                      leftIcon={<Icon as={list.icon} />}
+                      // variant={tab === Tab.stores  ? "solid" : "outline"}
+                      variant={
+                        isSelected === list.id || tab === list.tab
+                          ? "solid"
+                          : "outline"
+                      }
+                      to={
+                        list.name === "Branches"
+                          ? `/?${storeURLSearch}&variant=${Variant.branch}`
+                          : list.name === "POS Agents"
+                          ? `/?${storeURLSearch}&variant=${Variant.pos}`
+                          : `/?${storeURLSearch}&variant=${Variant.atm}`
+                      }
+                    >
+                      <div className="flex justify-between w-full items-center">
+                        <span className="flex-1 text-left">{list.name}</span>
                         <Icon as={isSelected === list.id ? IoRemove : IoAdd} />
+                      </div>
+                    </Button>
 
-                    </Flex>
-
-
-                        <Collapse in={isSelected === list.id} animateOpacity>
-                        <Button size="sm" variant="ghost" className="">
-                          Competition
-                        </Button>
-                      </Collapse>
+                    <Collapse in={isSelected === list.id} animateOpacity>
+                      <Button size="sm" variant="ghost" className="">
+                        Competition
+                      </Button>
+                    </Collapse>
                   </Box>
-              )
+                );
               })}
-
-
 
               {/* <Button
                 as={Link}
@@ -1837,14 +1843,7 @@ export function Home() {
                   Competition
                 </Button>
               </Collapse> */}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col overflow-y-auto">
-          {tab === Tab.stores ? (
-            <div className="flex-1  px-4">
-              <div className="flex items-center justify-between">
+              <div className="flex space-y-2 items-center justify-between">
                 <h5 className="font-semibold">Overview</h5>
 
                 <div className="flex items-center space-x-2">
@@ -1883,105 +1882,116 @@ export function Home() {
                 </div>
               </div>
 
-              {pipe(
-                filteredStores,
-                O.match({
-                  onNone: () =>
-                    navigation.state === "loading" ? <Loader /> : null,
-                  onSome: E.match({
-                    onLeft: (error) => {
-                      return (
-                        <>
-                          {error.message === undefined ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ rotate: 360, scale: 1 }}
-                              transition={{
-                                type: "spring",
-                                stiffness: 260,
-                                damping: 20,
-                              }}
-                              className="h-full m-auto items-center space-y-2 flex justify-center"
-                            >
-                              <p className="text-lg">Make a search first!</p>
-                            </motion.div>
-                          ) : (
-                            <LoadError />
-                          )}
-                          {/* <LoadError /> */}
-                        </>
-                      );
-                    },
-                    onRight: (stores) => {
-                      return (
-                        <>
-                          <ul className="space-y-4">
-                            {stores.map(({ id, properties: props }) => {
-                              const lat = props.latitude;
-                              const lng = props.longitude;
-
-                              return (
-                                <li
-                                  key={id}
-                                  id={id?.toString()}
-                                  className={clsx(
-                                    "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand)] rounded-md cursor-pointer",
-                                    {
-                                      ["border-blue-600"]: pipe(
-                                        store,
-                                        O.match({
-                                          onNone: constFalse,
-                                          onSome: (store) =>
-                                            store == id?.toString(),
-                                        })
-                                      ),
-                                    }
-                                  )}
-                                  onClick={() => {
-                                    map?.flyTo(new L.LatLng(lat, lng), 16);
-
-                                    if (id) {
-                                      setSearch((search) => {
-                                        search.set("store", id.toString());
-                                        return search;
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <h4 className="font-medium text-xl">
-                                    {props.branch_name}
-                                  </h4>
-
-                                  <h6
-                                    className="text-xs"
-                                    style={{ color: props.color }}
-                                  >
-                                    {props.type}
-                                  </h6>
-
-                                  <div className="text-sm space-y-2">
-                                    <p>Address: {props.address}</p>
-                                    {loaderData.latlng ? (
-                                      <DistanceBetween
-                                        end={{ lat, lng }}
-                                        start={loaderData.latlng}
-                                      />
-                                    ) : null}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </>
-                      );
-                    },
-                  }),
-                })
-              )}
             </div>
-          ) : null}
+          </div>
+
         </div>
-        <div className="flex justify-between  px-4">
+        
+        <div className="flex-1 flex flex-col lg:overflow-y-auto">
+                {tab === Tab.stores ? (
+                  <div className="flex-1  px-4">
+                    {pipe(
+                      filteredStores,
+                      O.match({ 
+                        onNone: () =>
+                          navigation.state === "loading" ? <Loader /> : null,
+                        onSome: E.match({
+                          onLeft: (error) => {
+                            return (
+                              <>
+                                {error.message === undefined ? (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ rotate: 360, scale: 1 }}
+                                    transition={{
+                                      type: "spring",
+                                      stiffness: 260,
+                                      damping: 20,
+                                    }}
+                                    className="h-full m-auto items-center space-y-2 flex justify-center"
+                                  >
+                                    <p className="text-lg">Make a search first!</p>
+                                  </motion.div>
+                                ) : (
+                                  <LoadError />
+                                )}
+                                {/* <LoadError /> */}
+                              </>
+                            );
+                          },
+                          onRight: (stores) => {
+                            return (
+                              <>
+                                <ul className="space-y-4">
+                                  {stores.map(({ id, properties: props }) => {
+                                    const lat = props.latitude;
+                                    const lng = props.longitude;
+
+                                    return (
+                                      <li
+                                        key={id}
+                                        id={id?.toString()}
+                                        className={clsx(
+                                          "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand-light)] rounded-md cursor-pointer",
+                                          {
+                                            ["border-blue-900"]: pipe(
+                                              store,
+                                              O.match({
+                                                onNone: constFalse,
+                                                onSome: (store) =>
+                                                  store == id?.toString(),
+                                              })
+                                            ),
+                                          }
+                                        )}
+                                        onClick={() => {
+                                          map?.flyTo(new L.LatLng(lat, lng), 16);
+
+                                          if (id) {
+                                            setSearch((search) => {
+                                              search.set("store", id.toString());
+                                              return search;
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <h4 className="font-medium text-lg">
+                                          {props.branch_name}
+                                        </h4>
+
+                                        <h6
+                                          className="text-sm"
+                                          style={{ color: props.color }}
+                                        >
+                                          {props.type}
+                                        </h6>
+
+                                        <div className="text-sm space-y-2">
+                                          <p>Address: {props.address}</p>
+                                          {loaderData.latlng ? (
+                                            <DistanceBetween
+                                              end={{ lat, lng }}
+                                              start={loaderData.latlng}
+                                            />
+                                          ) : null}
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </>
+                            );
+                          },
+                        }),
+                      })
+                    )}
+                  </div>
+                ) : null}
+        </div>
+
+      
+
+        <div className="flex justify-between px-4">
           {showInternalTools ? (
             <>
               <Button
