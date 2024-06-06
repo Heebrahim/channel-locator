@@ -13,7 +13,7 @@ import * as Layer from "@effect/io/Layer";
 import { LoaderFunctionArgs } from "react-router-dom";
 
 import { HttpClientLiveNoAuth } from "@/common/http-client";
-import { getFeatureService, getTab, isInternalUser, parseLatLng } from "./utils";
+import { getFeatureService, getTab, parseLatLng } from "./utils";
 import { SearchType, Tab } from "./types";
 
 const layer = StoreRepositoryLive.pipe(
@@ -25,6 +25,15 @@ const layer = StoreRepositoryLive.pipe(
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const search = url.searchParams;
+
+
+  if (search.get("clear") === "true") {
+    return {
+      branches: null,
+      latlng: null,
+    };
+  }
+
 
   const tab = getTab(search.get("tab"));
 
@@ -42,9 +51,28 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ) as Variant;
 
   const storePro = Effect.gen (function* (_){
-    const stores1 = yield* _(StoreService.getStores(variant))
-    return stores1
+    const stores_ = yield* _(
+      pipe(
+        searchType,
+        O.match({
+          onNone: () => Effect.succeed(null),
+          onSome: (searchType) =>
+            pipe(
+              searchType === SearchType.nearest 
+                ? Effect.flatMap(latlng, (latlng) =>
+                    StoreService.getNearestStores(latlng, variant)
+                  )
+                : StoreService.getStores(variant),
+            ),
+        })
+      )
+
+      )
+    return stores_
   }).pipe(Effect.provideLayer(layer), Effect.either)
+
+
+  
 
   const storesProgram = pipe(
     searchType,
@@ -52,7 +80,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       onNone: () => Effect.succeed(null),
       onSome: (searchType) =>
         pipe(
-          searchType === SearchType.nearest
+          searchType === SearchType.nearest 
             ? Effect.flatMap(latlng, (latlng) =>
                 StoreService.getNearestStores(latlng, variant)
               )
@@ -85,15 +113,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const result = await Effect.runPromise(
     Effect.all({
-      branches:tab === Tab.stores ? storesProgram : Effect.succeed(null),
-      // branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
+      // branches:tab === Tab.stores ? storesProgram : Effect.succeed(null),
+      branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
     })
   );
 
 
   return {
     ...result,
-    // branches: result.branches,
+    branches: result.branches,
     latlng: O.getOrNull(latlng),   
   };
 }

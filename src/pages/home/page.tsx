@@ -43,8 +43,9 @@ import { EditControl } from "react-leaflet-draw";
 
 import {
   computeRoute,
+  createATMIcon,
   createBranchIcon,
-  createStoreIcon,
+  createPOSIcon,
   defaultCenter,
   defaultZoom,
   GeolocationPositionErrorCode,
@@ -97,10 +98,8 @@ import {
   Checkbox,
   Collapse,
   Divider,
-  Flex,
   Icon,
-  Radio,
-  RadioGroup,
+
   Spinner,
   useToast,
 } from "@chakra-ui/react";
@@ -204,6 +203,8 @@ function useURLSearchParams() {
 
 export function Home() {
   const loaderData = useLoaderData() as Awaited<ReturnType<typeof loader>>;
+  // const [localLoaderData, setLocalLoaderData] = useState(loaderData);
+
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey,
@@ -223,15 +224,13 @@ export function Home() {
     [search]
   );
 
-  const storeVariant = useMemo(
-    () =>
-      pipe(
-        O.fromNullable(search.get("variant")),
-        O.filter(S.isNonEmpty),
-        O.getOrElse(() => Variant.store)
-      ),
-    [search]
-  );
+  const [dataVariant, setDataVariant] = useState(() => 
+    pipe(
+      O.fromNullable(search.get("variant")),
+      O.filter(S.isNonEmpty),
+      O.getOrElse(() => Variant.branch)      
+    )
+  )
 
   console.log(loaderData);
 
@@ -350,6 +349,8 @@ export function Home() {
       O.getOrElse(() => [] as number[])
     );
   });
+
+  const [isSelected, setIsSelected] = useState<null>(null);
 
   // For some unknown reason, we can't access the actual value of `selectedDataLayers` inside
   // callbacks/functions. So we need this to solve that
@@ -789,15 +790,15 @@ export function Home() {
                   const { color, ...props } = properties;
 
                   const icon =
-                    tab === Tab.stores && storeVariant === Variant.branch
-                      ? createStoreIcon(color) :
-                     tab === Tab.stores && storeVariant === Variant.pos
-                      ?  createStoreIcon(color) 
-                      : createBranchIcon(color)
+                    tab === Tab.stores && dataVariant === Variant.branch
+                      ? createBranchIcon()
+                      : tab === Tab.stores && dataVariant === Variant.pos
+                      ? createPOSIcon()
+                      : createATMIcon();
 
                   const map = mapRef.current;
 
-                  return (
+                  return (  
                     <Marker
                       key={id}
                       icon={icon}
@@ -844,7 +845,7 @@ export function Home() {
                             <div className="flex-1 space-y-1">
                               <h5>
                                 <strong>
-                                  {storeVariant === Variant.atm
+                                  {dataVariant === Variant.atm
                                     ? "Address"
                                     : "Address"}
                                 </strong>
@@ -852,7 +853,7 @@ export function Home() {
 
                               <p>
                                 <strong>
-                                  {storeVariant === Variant.branch
+                                  {dataVariant === Variant.branch
                                     ? props.address
                                     : props.address}
                                 </strong>
@@ -872,7 +873,7 @@ export function Home() {
                           </div>
 
                           <div className="space-y-2">
-                            {/* {storeVariant === Variant.store ? (
+                            {/* {dataVariant === Variant.store ? (
                               <Button
                                 as="a"
                                 size="sm"
@@ -905,7 +906,7 @@ export function Home() {
                       </Popup>
 
                       <Tooltip>
-                        {storeVariant === Variant.branch ? (
+                        {dataVariant === Variant.branch ? (
                           <p>{props.branch_name}</p>
                         ) : null}
                         <p>{props.address}</p>
@@ -919,7 +920,7 @@ export function Home() {
         }),
       })
     );
-  }, [filteredStores, setSearch, storeVariant]);
+  }, [filteredStores, setSearch, dataVariant]);
 
   const mapDataLayers = useMemo(() => {
     return pipe(
@@ -1426,6 +1427,11 @@ export function Home() {
     navigation.state,
   ]);
 
+  // useEffect(() => {
+  //   setLocalLoaderData(loaderData);
+  // }, [loaderData]);
+
+
   const tabSearchType = pipe(
     searchType,
     O.match({
@@ -1465,16 +1471,17 @@ export function Home() {
     },
   ];
 
-  const [isSelected, setIsSelected] = useState(null);
+
 
   const lists = [
-    { id: 1, name: "Branches", icon: IoStorefront, tab: "branch"},
-    { id: 2, name: "POS Agents", icon: IoStorefront,  tab: "pos"},
-    { id: 3, name: "ATM", icon: IoStorefront, tab: "atm"},
+    { id: 1, name: "Branches", icon: IoStorefront, variant: Variant.branch},
+    { id: 2, name: "POS Agents", icon: IoStorefront,  variant: Variant.pos},
+    { id: 3, name: "ATM", icon: IoStorefront, variant: Variant.atm},
   ];
 
   const toggle = (id) => {
     setIsSelected(isSelected === id ? null : id);
+
   }
 
   return (
@@ -1736,8 +1743,8 @@ export function Home() {
             to={`/?${storeURLSearch}&variant=${Variant.branch}`}
             leftIcon={<IoStorefront />}
             variant={
-              (tab === Tab.stores && storeVariant === Variant.store) ||
-              storeVariant === Variant.branch
+              (tab === Tab.stores && dataVariant === Variant.store) ||
+              dataVariant === Variant.branch
                 ? "solid"
                 : "outline"
             }
@@ -1752,7 +1759,7 @@ export function Home() {
             leftIcon={<IoPeople />}
             to={`/?${storeURLSearch}&variant=${Variant.pos}`}
             variant={
-              tab === Tab.stores && storeVariant === Variant.pos
+              tab === Tab.stores && dataVariant === Variant.pos
                 ? "solid"
                 : "outline"
             }
@@ -1767,7 +1774,7 @@ export function Home() {
             leftIcon={<IoPeople />}
             to={`/?${storeURLSearch}&variant=${Variant.customer}`}
             variant={
-              tab === Tab.stores && storeVariant === Variant.customer
+              tab === Tab.stores && dataVariant === Variant.customer
                 ? "solid"
                 : "outline"
             }
@@ -1789,17 +1796,17 @@ export function Home() {
                       as={Link}
                       size="sm"
                       onClick={() => {
-                        toggle(list.id);
+                        toggle(list.id)
+                        setDataVariant(list.variant)                      
                       }}
                       className={clsx(
                         "w-full flex justify-between items-center "
                       )}
                       leftIcon={<Icon as={list.icon} />}
-                      // variant={tab === Tab.stores  ? "solid" : "outline"}
                       variant={
-                        isSelected === list.id || tab === list.tab
+                        dataVariant === list.variant
                           ? "solid"
-                          : "outline"
+                          : "outline" 
                       }
                       to={
                         list.name === "Branches"
@@ -1831,7 +1838,7 @@ export function Home() {
                 leftIcon={<IoPeople />}
                 to={`/?${storeURLSearch}&variant=${Variant.customer}`}
                 variant={
-                  tab === Tab.stores && storeVariant === Variant.customer
+                  tab === Tab.stores && dataVariant === Variant.customer
                     ? "solid"
                     : "outline"
                 }
@@ -1853,6 +1860,7 @@ export function Home() {
                       onChange={(e) => {
                         setSearch((search) => {
                           search.set("searchType", e.target.value);
+                          search.delete("clear")
                           return search;
                         });
                       }}
@@ -1871,10 +1879,11 @@ export function Home() {
                           search.delete("d");
                           search.delete("store");
                           search.delete("searchType");
+                          search.set("clear", "true")
                           return search;
                         },
-                        { replace: true }
-                      );
+                        { replace: true })          
+                      // setLocalLoaderData({ branches: null})
                     }}
                   >
                     Clear

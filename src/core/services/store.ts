@@ -31,7 +31,7 @@ function extractData(variant: Variant) {
           ? data.properties.Longitude
           : variant === Variant.pos
           ? data.properties.Longitude
-          : data.properties.Longitutde,
+          : data.properties.Longitude,
       lga: data.properties.LGA ?? "",
       branch_name:
         variant === Variant.branch

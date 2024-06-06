@@ -81,23 +81,21 @@ export function getFeatureService() {
   return createFeatureService(featureServiceUrl);
 }
 
-export function createStoreIcon(color = /* MTN Yellow */ "#FFC403") {
+export function createPOSIcon() {
   return L.divIcon({
     className: "",
     iconSize: [24, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20],
     html: /* html */ `
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" version="1.1" style="shape-rendering:geometricPrecision;text-rendering:geometricPrecision;image-rendering:optimizeQuality;" viewBox="0 0 333 416.25" x="0px" y="0px" fill-rule="evenodd" clip-rule="evenodd"><defs><style type="text/css">
-   
-    .fil0 {fill:black}
-   
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" version="1.1" style="shape-rendering:geometricPrecision;text-rendering:geometricPrecision;image-rendering:optimizeQuality;" viewBox="0 0 333 416.25" x="0px" y="0px" fill-rule="evenodd" clip-rule="evenodd"><defs><style type="text/css">  
+    .fil0 {fill:black}  
   </style></defs><g><path class="fil0" d="M167 33c34,0 61,28 61,62 0,34 -27,61 -61,61 -34,0 -62,-27 -62,-61 0,-34 28,-62 62,-62zm0 134c64,0 115,51 115,115 0,6 0,12 -1,18l-229 0c-1,-6 -1,-12 -1,-18 0,-64 52,-115 116,-115z"/></g></svg>
     `,
   });
 }
 
-export function createBranchIcon(color = /* MTN Yellow */ "#FFC403") {
+export function createBranchIcon() {
   return L.divIcon({
     className: "",
     iconSize: [24, 40],
@@ -107,6 +105,23 @@ export function createBranchIcon(color = /* MTN Yellow */ "#FFC403") {
     <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 115.44"><defs><style>.cls-1{fill-rule:evenodd;}</style></defs><title>bank</title><path  class="cls-1" d="M2.79,48.12,61.44,0l58.94,48.12ZM61.44,24.26A4.73,4.73,0,1,1,56.71,29a4.73,4.73,0,0,1,4.73-4.73Zm0-4.8A9.53,9.53,0,1,1,51.91,29a9.53,9.53,0,0,1,9.53-9.53Zm8.67,1.82a11.6,11.6,0,1,1-8-3.87,11.6,11.6,0,0,1,8,3.87Zm-8.67-6.43A14.14,14.14,0,1,1,47.3,29,14.14,14.14,0,0,1,61.44,14.85ZM0,108.81H9.08v-6.33H10.4v-3h3.84V63.23H6.38V54.55H116.49v8.68h-7.85V99.46h3.84v3h1.32v6.33h9.08v6.63H0v-6.63Zm32.59-6.33H37v-3h3.85V63.23H28.74V99.46h3.85v3Zm26.63,0h4.44v-3h3.85V63.23H55.37V99.46h3.85v3Zm26.63,0h4.44v-3h3.85V63.23H82V99.46h3.85v3Z"/></svg>
     `,
   });
+}
+
+export function createATMIcon(){
+  return L.divIcon({
+    className: "",
+    iconSize: [24, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    html: `
+    <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="24" r="24" fill="#000"/>
+    <path d="M34.5 22.0081L32.9262 15.4379C32.6504 14.2917 31.4888 13.5717 30.3362 13.8545C29.3224 14.1022 28.8296 14.8043 28.6299 15.2984C28.3938 15.8814 27.3397 18.5233 27.0933 19.0693C27.0069 19.2587 26.8245 19.3585 26.7874 19.3752C26.5781 19.468 24.4834 20.3518 24.4834 20.3518V20.3557C24.2749 20.4517 24.0983 20.6054 23.9743 20.7985C23.8502 20.9916 23.7839 21.2161 23.7832 21.4456C23.7832 22.1131 24.3298 22.6545 25.0037 22.6545C25.149 22.6545 25.2872 22.6245 25.4171 22.5784V22.5829L28.1979 21.427C28.5794 21.2491 28.7656 21.0238 28.955 20.6955C29.0344 20.5573 29.2757 19.9787 29.4722 19.5038L31.1502 26.5214L31.1483 37.395C31.1451 38.4753 31.8914 39.356 32.9819 39.3598C34.0738 39.3637 34.8629 38.4913 34.8699 37.4091L34.8808 24.5752C34.8795 23.9717 34.6395 22.5374 34.5 22.0081Z" fill="#Fff"/>
+    <path d="M28.4145 13.5297C29.7771 13.5297 30.8817 12.4352 30.8817 11.0849C30.8817 9.73471 29.7771 8.64014 28.4145 8.64014C27.0519 8.64014 25.9473 9.73471 25.9473 11.0849C25.9473 12.4352 27.0519 13.5297 28.4145 13.5297Z" fill="#FFf"/>
+    <path d="M23.7796 24.2374H23.7822L19.9582 16.5657L19.9575 16.5727C19.8147 16.2777 19.5914 16.029 19.3135 15.8552C19.0355 15.6814 18.7141 15.5896 18.3863 15.5903H14.8619C13.8999 15.5897 13.1191 16.3628 13.1191 17.3164V39.3599H23.9774V25.1027C23.9764 24.8031 23.9089 24.5076 23.7796 24.2374Z" fill="#FFf"/>
+    </svg>
+    `
+  })
 }
 
 export function groupLayerAttributesByCategory(layer: DataLayer) {
