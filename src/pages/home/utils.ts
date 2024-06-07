@@ -189,8 +189,8 @@ export function getTab(str: string | null) {
   return pipe(
     O.fromNullable(str),
     O.filter(S.isNonEmpty),
-    O.filter((_) => _ == Tab.stores || _ == Tab.branches),
-    O.getOrElse(() => Tab.stores)
+    O.filter((_) => _  == Tab.branches),
+    O.getOrElse(() => Tab.branches)
   );
 }
 

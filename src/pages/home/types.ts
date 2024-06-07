@@ -1,5 +1,4 @@
 export enum Tab {
-  stores = "stores",
   branches = "branches",
   posStands = "pos",
   atmStands = "atm"

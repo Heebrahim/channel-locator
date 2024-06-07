@@ -1,6 +1,6 @@
 import * as S from "@effect/schema/Schema";
 
-export const Store = S.struct({
+export const Branch = S.struct({
 	id: S.number,
 	tel: S.number,
 	lga: S.string,
@@ -14,4 +14,4 @@ export const Store = S.struct({
 	longitude: S.number,
 });
 
-export type Store = S.To<typeof Store>;
+export type Branch = S.To<typeof Branch>;

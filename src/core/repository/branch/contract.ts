@@ -6,22 +6,21 @@ import { LatLng } from "@/core/types/misc";
 import { FeatureCollection, Geometry } from "geojson";
 
 export enum Variant {
-  store = "store",
   branch = "branch",
   pos = "pos",
   atm = "atm"
   
 }
 
-export type Stores = FeatureCollection<Geometry, unknown>;
+export type Branches = FeatureCollection<Geometry, unknown>;
 
-export interface StoreRepository {
-  findAll(variant: Variant): Effect.Effect<never, SpectrumError, Stores>;
+export interface BranchRepository {
+  findAll(variant: Variant): Effect.Effect<never, SpectrumError, Branches>;
 
   findNearestTo(
     point: LatLng,
     variant: Variant
-  ): Effect.Effect<never, SpectrumError, Stores>;
+  ): Effect.Effect<never, SpectrumError, Branches>;
 }
 
-export const StoreRepository = Context.Tag<StoreRepository>();
+export const BranchRepository = Context.Tag<BranchRepository>();

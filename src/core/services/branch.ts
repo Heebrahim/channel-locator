@@ -2,13 +2,13 @@ import { pipe } from "@effect/data/Function";
 import * as Effect from "@effect/io/Effect";
 
 import { Feature, Geometry } from "geojson";
-import { Store } from "../models/store";
-import { StoreRepository, Variant } from "../repository/store/contract";
+import { Branch } from "../models/branch";
+import { BranchRepository, Variant } from "../repository/branch/contract";
 
 function extractData(variant: Variant) {
   return (
   data: Feature<Geometry, any>,
-): Feature<Geometry, Store> => {
+): Feature<Geometry, Branch> => {
   return {
     ...data,
     properties: {
@@ -53,21 +53,21 @@ function extractData(variant: Variant) {
 }
 }
 
-export function getStores(variant: Variant) {
+export function getBranches(variant: Variant) {
   return pipe(
-    Effect.flatMap(StoreRepository, (repo) => repo.findAll(variant)),
+    Effect.flatMap(BranchRepository, (repo) => repo.findAll(variant)),
     // Effect.map((result) => result.features),
     Effect.map((_) => ({ ..._, features: _.features.map(extractData(variant)) })),
-    // Effect.flatMap(S.parseEither(S.array(Store)))
+    // Effect.flatMap(S.parseEither(S.array(Branch)))
   );
 }
 
-export function getNearestStores(
+export function getNearestBranches(
   latlng: { lat: number; lng: number },
   variant: Variant,
 ) {
   return pipe(
-    Effect.flatMap(StoreRepository, (repo) =>
+    Effect.flatMap(BranchRepository, (repo) =>
       repo.findNearestTo(latlng, variant),
     ),
     Effect.map((_) => ({
@@ -76,6 +76,6 @@ export function getNearestStores(
     })),
     // Effect.map((result) => result.features),
     // Effect.map(A.map(extractData)),
-    // Effect.flatMap(S.parseEither(S.array(Store)))
+    // Effect.flatMap(S.parseEither(S.array(Branch)))
   );
 }

@@ -3,20 +3,18 @@ import * as Either from "@effect/data/Either"
 import * as Layer from "@effect/io/Layer";
 import { pipe } from "@effect/data/Function";
 
-import { Stores, Variant, StoreRepository } from "./contract";
+import { Branches, Variant, BranchRepository } from "./contract";
 import { FeatureService } from "@/core/tags/spectrum";
 import { filterSpectrumResult } from "../utils";
 import { SpectrumError } from "@/core/exceptions/spectrum";
 import { getAuth } from "@/common/authUtil";
 
 
-export const StoreRepositoryLive = Layer.effect(
-  StoreRepository,
+export const BranchRepositoryLive = Layer.effect(
+  BranchRepository,
   Effect.gen(function* (_) {
     const service = yield* _(FeatureService);
-
     const auth = getAuth()
-
     Either.isRight(auth) ? console.log(auth.right.roles) : null
 
 
@@ -44,7 +42,7 @@ export const StoreRepositoryLive = Layer.effect(
                 { withinDistance: "50000000 mi", maxFeatures: "1000" }
               ),
           }),
-          Effect.flatMap((_) => filterSpectrumResult<Stores>(_))
+          Effect.flatMap((_) => filterSpectrumResult<Branches>(_))
         );
       },
       findNearestTo({ lat, lng }, variant) {

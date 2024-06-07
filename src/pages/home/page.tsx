@@ -122,7 +122,7 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import { HttpClientLive } from "@/common/http-client";
 import { SessionStorageLive } from "@/core/adapters/storage/implementation";
 import { DataLayerRepositoryLive } from "@/core/repository/data-layer/implementation";
-import { Variant } from "@/core/repository/store/contract";
+import { Variant } from "@/core/repository/branch/contract";
 import { getAuthentication, invalidate } from "@/core/services/authentication";
 import { findForLayerAt } from "@/core/services/data-layer";
 import { LatLng } from "@/core/types/misc";
@@ -244,43 +244,43 @@ export function Home() {
 
   const { lat, lng } = loaderData.latlng ?? defaultCenter;
 
-  const stores = useMemo(
+  const branches = useMemo(
     () => O.fromNullable(loaderData.branches),
     [loaderData.branches]
   );
 
-  const store = useMemo(
-    () => pipe(O.fromNullable(search.get("store")), O.filter(S.isNonEmpty)),
+  const branch = useMemo(
+    () => pipe(O.fromNullable(search.get("branch")), O.filter(S.isNonEmpty)),
     [search]
   );
 
-  const selectedStore = useMemo(() => {
+  const selectedBranch = useMemo(() => {
     return pipe(
-      O.all({ store, stores }),
-      O.flatMap(({ stores, store }) => {
+      O.all({ branch, branches }),
+      O.flatMap(({ branches, branch }) => {
         return pipe(
-          stores,
+          branches,
           E.mapRight((_) => _.features),
           E.match({
             onLeft: O.none,
-            onRight: A.findFirst((_) => _.id == store),
+            onRight: A.findFirst((_) => _.id == branch),
           })
         );
       })
     );
-  }, [store, stores]);
+  }, [branch, branches]);
 
-  const filteredStores = useMemo(() => {
+  const filteredBranches = useMemo(() => {
     return pipe(
-      stores,
+      branches,
       O.map(
-        E.mapRight((stores) => {
+        E.mapRight((branches) => {
           return pipe(
             storeType,
             O.match({
-              onNone: () => stores.features,
+              onNone: () => branches.features,
               onSome: (type) =>
-                stores.features.filter(
+                branches.features.filter(
                   ({ properties }) => type == properties.type
                 ),
             })
@@ -288,7 +288,7 @@ export function Home() {
         })
       )
     );
-  }, [storeType, stores]);
+  }, [storeType, branches]);
 
   // const storeTypes = useMemo(() => {
   //   type Groups = Record<
@@ -297,7 +297,7 @@ export function Home() {
   //   >;
 
   //   return pipe(
-  //     stores,
+  //     branches,
   //     O.flatMap((_) => pipe(_, E.getOrNull, O.fromNullable)),
   //     O.map((_) => _.features),
   //     O.map(
@@ -308,7 +308,7 @@ export function Home() {
   //       })
   //     )
   //   );
-  // }, [stores]);
+  // }, [branches]);
 
   const toast = useToast();
 
@@ -773,26 +773,26 @@ export function Home() {
     }
   }, []);
 
-  const storesMarkers = useMemo(() => {
+  const branchesMarkers = useMemo(() => {
     return pipe(
-      filteredStores,
+      filteredBranches,
       O.match({
         onNone: constNull,
         onSome: E.match({
           onLeft: constNull,
-          onRight(stores) {
+          onRight(branches) {
             return (
               <MarkerClusterGroup chunkedLoading>
-                {stores.map(({ id, properties }) => {
+                {branches.map(({ id, properties }) => {
                   const lat = properties.latitude;
                   const lng = properties.longitude;
 
                   const { color, ...props } = properties;
 
                   const icon =
-                    tab === Tab.stores && dataVariant === Variant.branch
+                    tab === Tab.branches && dataVariant === Variant.branch
                       ? createBranchIcon()
-                      : tab === Tab.stores && dataVariant === Variant.pos
+                      : tab === Tab.branches && dataVariant === Variant.pos
                       ? createPOSIcon()
                       : createATMIcon();
 
@@ -806,7 +806,7 @@ export function Home() {
                       eventHandlers={{
                         popupclose() {
                           // @ts-expect-error
-                          updateURLSearchWithoutNavigation("store", null);
+                          updateURLSearchWithoutNavigation("branch", null);
                         },
                         click() {
                           if (id) {
@@ -815,7 +815,7 @@ export function Home() {
                               ?.scrollIntoView();
 
                             updateURLSearchWithoutNavigation(
-                              "store",
+                              "branch",
                               id.toString()
                             );
 
@@ -873,7 +873,7 @@ export function Home() {
                           </div>
 
                           <div className="space-y-2">
-                            {/* {dataVariant === Variant.store ? (
+                            {/* {dataVariant === Variant.branch ? (
                               <Button
                                 as="a"
                                 size="sm"
@@ -920,7 +920,7 @@ export function Home() {
         }),
       })
     );
-  }, [filteredStores, setSearch, dataVariant]);
+  }, [filteredBranches, setSearch, dataVariant]);
 
   const mapDataLayers = useMemo(() => {
     return pipe(
@@ -1350,7 +1350,7 @@ export function Home() {
      *
      * - Direction
      * - Selection using any of the drawing tools
-     * - Stores
+     * - branches
      * - Searched location
      */
 
@@ -1380,24 +1380,24 @@ export function Home() {
         }
       }
 
-      if (tab === Tab.stores) {
-        if (O.isSome(selectedStore)) {
-          const store = selectedStore.value.properties;
-          const lat = store.latitude;
-          const lng = store.longitude;
+      if (tab === Tab.branches) {
+        if (O.isSome(selectedBranch)) {
+          const branch = selectedBranch.value.properties;
+          const lat = branch.latitude;
+          const lng = branch.longitude;
           map?.flyTo([lat, lng], zoom);
           return;
         }
 
-        const stores_ = pipe(
-          filteredStores,
+        const branches_ = pipe(
+          filteredBranches,
           O.flatMap(flow(E.getOrNull, O.fromNullable)),
           O.getOrNull
         );
 
-        if (stores_) {
+        if (branches_) {
           const group = L.featureGroup();
-          const feature = L.geoJson(stores_);
+          const feature = L.geoJson(branches_);
 
           group.addLayer(feature);
 
@@ -1420,8 +1420,8 @@ export function Home() {
     map,
     tab,
     loaderData.latlng,
-    filteredStores,
-    selectedStore,
+    filteredBranches,
+    selectedBranch,
     dataLayerSelectionResult,
     directionQuery.data,
     navigation.state,
@@ -1440,7 +1440,7 @@ export function Home() {
     })
   );
 
-  const storeURLSearch = `tab=${Tab.stores}&searchType=${tabSearchType}&p=${lat},${lng}`;
+  const branchURLSearch = `tab=${Tab.branches}&searchType=${tabSearchType}&p=${lat},${lng}`;
 
   const steps = [
     {
@@ -1557,7 +1557,7 @@ export function Home() {
                 )
               : null}
 
-            {storesMarkers}
+            {branchesMarkers}
 
             {markerLatlng ? (
               <Marker
@@ -1740,10 +1740,10 @@ export function Home() {
             as={Link}
             size="sm"
             className={styles.tab}
-            to={`/?${storeURLSearch}&variant=${Variant.branch}`}
+            to={`/?${branchURLSearch}&variant=${Variant.branch}`}
             leftIcon={<IoStorefront />}
             variant={
-              (tab === Tab.stores && dataVariant === Variant.store) ||
+              (tab === Tab.branches && dataVariant === Variant.branch) ||
               dataVariant === Variant.branch
                 ? "solid"
                 : "outline"
@@ -1757,9 +1757,9 @@ export function Home() {
             size="sm"
             className={styles.tab}
             leftIcon={<IoPeople />}
-            to={`/?${storeURLSearch}&variant=${Variant.pos}`}
+            to={`/?${branchURLSearch}&variant=${Variant.pos}`}
             variant={
-              tab === Tab.stores && dataVariant === Variant.pos
+              tab === Tab.branches && dataVariant === Variant.pos
                 ? "solid"
                 : "outline"
             }
@@ -1772,9 +1772,9 @@ export function Home() {
             size="sm"
             className={styles.tab}
             leftIcon={<IoPeople />}
-            to={`/?${storeURLSearch}&variant=${Variant.customer}`}
+            to={`/?${branchURLSearch}&variant=${Variant.customer}`}
             variant={
-              tab === Tab.stores && dataVariant === Variant.customer
+              tab === Tab.branches && dataVariant === Variant.customer
                 ? "solid"
                 : "outline"
             }
@@ -1810,10 +1810,10 @@ export function Home() {
                       }
                       to={
                         list.name === "Branches"
-                          ? `/?${storeURLSearch}&variant=${Variant.branch}`
+                          ? `/?${branchURLSearch}&variant=${Variant.branch}`
                           : list.name === "POS Agents"
-                          ? `/?${storeURLSearch}&variant=${Variant.pos}`
-                          : `/?${storeURLSearch}&variant=${Variant.atm}`
+                          ? `/?${branchURLSearch}&variant=${Variant.pos}`
+                          : `/?${branchURLSearch}&variant=${Variant.atm}`
                       }
                     >
                       <div className="flex justify-between w-full items-center">
@@ -1836,9 +1836,9 @@ export function Home() {
                 size="sm"
                 className={clsx("space-y-4", styles.network)}
                 leftIcon={<IoPeople />}
-                to={`/?${storeURLSearch}&variant=${Variant.customer}`}
+                to={`/?${branchURLSearch}&variant=${Variant.customer}`}
                 variant={
-                  tab === Tab.stores && dataVariant === Variant.customer
+                  tab === Tab.branches && dataVariant === Variant.customer
                     ? "solid"
                     : "outline"
                 }
@@ -1877,7 +1877,7 @@ export function Home() {
                       setSearch(
                         (search) => {
                           search.delete("d");
-                          search.delete("store");
+                          search.delete("branch");
                           search.delete("searchType");
                           search.set("clear", "true")
                           return search;
@@ -1897,10 +1897,10 @@ export function Home() {
         </div>
         
         <div className="flex-1 flex flex-col lg:overflow-y-auto">
-                {tab === Tab.stores ? (
+                {tab === Tab.branches ? (
                   <div className="flex-1  px-4">
                     {pipe(
-                      filteredStores,
+                      filteredBranches,
                       O.match({ 
                         onNone: () =>
                           navigation.state === "loading" ? <Loader /> : null,
@@ -1928,11 +1928,11 @@ export function Home() {
                               </>
                             );
                           },
-                          onRight: (stores) => {
+                          onRight: (branches) => {
                             return (
                               <>
                                 <ul className="space-y-4">
-                                  {stores.map(({ id, properties: props }) => {
+                                  {branches.map(({ id, properties: props }) => {
                                     const lat = props.latitude;
                                     const lng = props.longitude;
 
@@ -1944,11 +1944,11 @@ export function Home() {
                                           "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand-light)] rounded-md cursor-pointer",
                                           {
                                             ["border-blue-900"]: pipe(
-                                              store,
+                                              branch,
                                               O.match({
                                                 onNone: constFalse,
-                                                onSome: (store) =>
-                                                  store == id?.toString(),
+                                                onSome: (branch) =>
+                                                  branch == id?.toString(),
                                               })
                                             ),
                                           }
@@ -1958,7 +1958,7 @@ export function Home() {
 
                                           if (id) {
                                             setSearch((search) => {
-                                              search.set("store", id.toString());
+                                              search.set("branch", id.toString());
                                               return search;
                                             });
                                           }

@@ -1,8 +1,8 @@
-import { Variant } from "@/core/repository/store/contract";
+import { Variant } from "@/core/repository/branch/contract";
 
-import { StoreRepositoryLive } from "@/core/repository/store/implementation";
+import { BranchRepositoryLive } from "@/core/repository/branch/implementation";
 
-import * as StoreService from "@/core/services/store";
+import * as BranchService from "@/core/services/branch";
 
 import { pipe } from "@effect/data/Function";
 import * as O from "@effect/data/Option";
@@ -16,9 +16,9 @@ import { HttpClientLiveNoAuth } from "@/common/http-client";
 import { getFeatureService, getTab, parseLatLng } from "./utils";
 import { SearchType, Tab } from "./types";
 
-const layer = StoreRepositoryLive.pipe(
+const layer = BranchRepositoryLive.pipe(
   Layer.useMerge(HttpClientLiveNoAuth),
-  Layer.useMerge(StoreRepositoryLive),
+  Layer.useMerge(BranchRepositoryLive),
   Layer.useMerge(getFeatureService())
 );
 
@@ -50,8 +50,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     O.getOrElse(() => Variant.branch)
   ) as Variant;
 
-  const storePro = Effect.gen (function* (_){
-    const stores_ = yield* _(
+  const branchesProgram = Effect.gen (function* (_){
+    const branches_ = yield* _(
       pipe(
         searchType,
         O.match({
@@ -60,51 +60,51 @@ export async function loader({ request }: LoaderFunctionArgs) {
             pipe(
               searchType === SearchType.nearest 
                 ? Effect.flatMap(latlng, (latlng) =>
-                    StoreService.getNearestStores(latlng, variant)
+                    BranchService.getNearestBranches(latlng, variant)
                   )
-                : StoreService.getStores(variant),
+                : BranchService.getBranches(variant),
             ),
         })
       )
 
       )
-    return stores_
+    return branches_
   }).pipe(Effect.provideLayer(layer), Effect.either)
 
 
   
 
-  const storesProgram = pipe(
-    searchType,
-    O.match({
-      onNone: () => Effect.succeed(null),
-      onSome: (searchType) =>
-        pipe(
-          searchType === SearchType.nearest 
-            ? Effect.flatMap(latlng, (latlng) =>
-                StoreService.getNearestStores(latlng, variant)
-              )
-            : StoreService.getStores(variant),
-          Effect.provideLayer(layer),
-          Effect.either
-        ),
-    })
-  );
+  // const BranchesProgram = pipe(
+  //   searchType,
+  //   O.match({
+  //     onNone: () => Effect.succeed(null),
+  //     onSome: (searchType) =>
+  //       pipe(
+  //         searchType === SearchType.nearest 
+  //           ? Effect.flatMap(latlng, (latlng) =>
+  //               BranchService.getNearestBranches(latlng, variant)
+  //             )
+  //           : BranchService.getBranches(variant),
+  //         Effect.provideLayer(layer),
+  //         Effect.either
+  //       ),
+  //   })
+  // );
 
   
   // const defaultSearchType = isInternalUser() ? SearchType.all : SearchType.nearest;
 
 
-  // const storesProgram = pipe(
+  // const BranchesProgram = pipe(
   //   O.fromNullable(search.get("searchType")),
   //   O.getOrElse(() => defaultSearchType), 
   //   (searchType) => {
   //     return pipe(
   //       searchType === SearchType.nearest && parseLatLng(search.get("p"))
   //         ? Effect.flatMap(parseLatLng(search.get("p")), (latlng) =>
-  //             StoreService.getNearestStores(latlng, variant)
+  //             BranchService.getNearestBranches(latlng, variant)
   //           )
-  //         : StoreService.getStores(variant),
+  //         : BranchService.getBranches(variant),
   //       Effect.provideLayer(layer),
   //       Effect.either
   //     );
@@ -113,8 +113,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const result = await Effect.runPromise(
     Effect.all({
-      // branches:tab === Tab.stores ? storesProgram : Effect.succeed(null),
-      branches: tab === Tab.stores ? storePro : Effect.succeed(null), 
+      // branches:tab === Tab.Branches ? BranchesProgram : Effect.succeed(null),
+      branches: tab === Tab.branches ? branchesProgram : Effect.succeed(null), 
     })
   );
 
