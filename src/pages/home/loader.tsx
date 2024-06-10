@@ -65,31 +65,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
                 : BranchService.getBranches(variant),
             ),
         })
-      )
-
-      )
+      ) )
     return branches_
   }).pipe(Effect.provideLayer(layer), Effect.either)
 
 
   
 
-  // const BranchesProgram = pipe(
-  //   searchType,
-  //   O.match({
-  //     onNone: () => Effect.succeed(null),
-  //     onSome: (searchType) =>
-  //       pipe(
-  //         searchType === SearchType.nearest 
-  //           ? Effect.flatMap(latlng, (latlng) =>
-  //               BranchService.getNearestBranches(latlng, variant)
-  //             )
-  //           : BranchService.getBranches(variant),
-  //         Effect.provideLayer(layer),
-  //         Effect.either
-  //       ),
-  //   })
-  // );
+  const branchesProgram2 = pipe(
+    searchType,
+    O.match({
+      onNone: () => Effect.succeed(null),
+      onSome: (searchType) =>
+        pipe(
+          searchType === SearchType.nearest 
+            ? Effect.flatMap(latlng, (latlng) =>
+                BranchService.getNearestCompetitors(latlng, variant)
+              )
+            : BranchService.getCompetitors(variant),
+          Effect.provideLayer(layer),
+          Effect.either
+        ),
+    })
+  );
 
   
   // const defaultSearchType = isInternalUser() ? SearchType.all : SearchType.nearest;
@@ -114,7 +112,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const result = await Effect.runPromise(
     Effect.all({
       // branches:tab === Tab.Branches ? BranchesProgram : Effect.succeed(null),
-      branches: tab === Tab.branches ? branchesProgram : Effect.succeed(null), 
+      branches: tab === Tab.branches ? branchesProgram2 : Effect.succeed(null), 
     })
   );
 

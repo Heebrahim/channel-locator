@@ -299,7 +299,6 @@ export const DataLayerRepositoryLive = Layer.effect(
           http.make
         );
         // return Effect.succeed(dataLayerStatic);
-
       },
       searchAt(layer, { lat: y, lng: x }, radius, options) {
         return pipe(

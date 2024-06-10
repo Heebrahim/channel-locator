@@ -1,9 +1,35 @@
 import { pipe } from "@effect/data/Function";
 import * as Effect from "@effect/io/Effect";
+import * as Either from "@effect/data/Either"
 
-import { Feature, Geometry } from "geojson";
+
+
+import { Feature, FeatureCollection, Geometry } from "geojson";
 import { Branch } from "../models/branch";
 import { BranchRepository, Variant } from "../repository/branch/contract";
+import { getAuth } from "@/common/authUtil";
+
+
+
+
+const auth = getAuth()
+Either.isRight(auth) ? console.log(auth.right.roles) : console.log("NO")
+
+
+
+
+
+
+function extractCompetitors(currentUserBank: string){
+  return (
+    data: FeatureCollection,
+  ): FeatureCollection => {
+    return {
+      ...data,
+      features: data.features.filter(feature => feature.properties?.BANK_NAME !== currentUserBank)
+    }
+  }
+}
 
 function extractData(variant: Variant) {
   return (
@@ -39,6 +65,13 @@ function extractData(variant: Variant) {
           : variant === Variant.pos
           ? data.properties.Agent_name
           : data.properties.branch_nam,
+      bank_name:
+      variant === Variant.branch
+        ? data.properties.BANK_NAME
+        : variant === Variant.pos
+        ? data.properties.Agent_name
+        : data.properties.branch_nam,
+  
 
       region: data.properties.Region ?? "",
 
@@ -62,6 +95,24 @@ export function getBranches(variant: Variant) {
   );
 }
 
+
+
+
+export function getCompetitors(variant: Variant) {
+  return pipe(
+    Effect.flatMap(BranchRepository, (repo) => repo.findAllCompetitors(variant)),
+    Effect.map((data) => 
+      extractCompetitors("FCMB")(data) 
+    ),
+    // Effect.map((result) => result.features),
+    Effect.map((_) => ({ ..._, features: _.features.map(extractData(variant)) })),
+    // Effect.flatMap(S.parseEither(S.array(Branch)))
+  );
+}
+
+
+
+
 export function getNearestBranches(
   latlng: { lat: number; lng: number },
   variant: Variant,
@@ -77,5 +128,25 @@ export function getNearestBranches(
     // Effect.map((result) => result.features),
     // Effect.map(A.map(extractData)),
     // Effect.flatMap(S.parseEither(S.array(Branch)))
+  );
+}
+
+
+
+export function getNearestCompetitors(
+  latlng: { lat: number; lng: number },
+  variant: Variant,
+) {
+  return pipe(
+    Effect.flatMap(BranchRepository, (repo) =>
+      repo.findNearestToCompetitors(latlng, variant),
+    ),
+    Effect.map((data) => 
+      extractCompetitors("FCMB")(data) 
+    ),
+    Effect.map((_) => ({
+      ..._,
+      features: _.features.map(extractData(variant)),
+    })),
   );
 }

@@ -5,6 +5,7 @@ export const Branch = S.struct({
 	tel: S.number,
 	lga: S.string,
 	branch_name: S.string,
+	bank_name: S.string,
 	type: S.string,
 	color: S.string,
 	state: S.string,

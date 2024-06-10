@@ -13,7 +13,6 @@ export enum Variant {
 }
 
 export type Branches = FeatureCollection<Geometry, unknown>;
-
 export interface BranchRepository {
   findAll(variant: Variant): Effect.Effect<never, SpectrumError, Branches>;
 
@@ -21,6 +20,14 @@ export interface BranchRepository {
     point: LatLng,
     variant: Variant
   ): Effect.Effect<never, SpectrumError, Branches>;
+
+  findAllCompetitors(variant: Variant): Effect.Effect<never, SpectrumError, Branches>;
+
+  findNearestToCompetitors(
+    point: LatLng,
+    variant: Variant
+  ): Effect.Effect<never, SpectrumError, Branches>;
+
 }
 
 export const BranchRepository = Context.Tag<BranchRepository>();

@@ -15,10 +15,8 @@ export const BranchRepositoryLive = Layer.effect(
   Effect.gen(function* (_) {
     const service = yield* _(FeatureService);
     const auth = getAuth()
-    Either.isRight(auth) ? console.log(auth.right.roles) : null
+    Either.isRight(auth) ? console.log(auth.right.roles) : console.log("No")
 
-
-    
 
     const branches_mapName = `/CHANNELS/NamedMaps/FIRST_BANK`;
 
@@ -26,6 +24,7 @@ export const BranchRepositoryLive = Layer.effect(
 
     const ATM_mapName = `/CHANNELS/NamedMaps/UNION_BANK`;
 
+    const competition_mapName = `/CHANNELS/NamedMaps/BANKS_MERGED`
 
     return {
       findAll(variant) {
@@ -62,6 +61,46 @@ export const BranchRepositoryLive = Layer.effect(
           Effect.flatMap((_) => filterSpectrumResult(_))
         );
       },
+
+      findAllCompetitors(variant) {
+        return pipe(
+          Effect.tryPromise({
+            catch: (e) => new SpectrumError(e),
+            try: () =>
+              service.searchNearest(
+                variant === Variant.branch 
+                ? competition_mapName 
+                :variant === Variant.pos 
+                ? competition_mapName : competition_mapName,
+                { type: "Point", coordinates: [1, 2] },
+                { withinDistance: "50000000 mi", maxFeatures: "1000" }
+              ),
+          }),
+          Effect.flatMap((_) => filterSpectrumResult<Branches>(_))
+        );
+      },
+
+      findNearestToCompetitors({ lat, lng }, variant) {
+        return pipe(
+          Effect.tryPromise({
+            catch: (e) => new SpectrumError(e),
+            try: () =>
+              service.searchNearest(
+                variant === Variant.branch 
+                ? competition_mapName
+                :variant === Variant.pos  
+                ? competition_mapName : competition_mapName,
+                { type: "Point", coordinates: [lng, lat] },
+                { withinDistance: "5000 mi", maxFeatures: "5" }
+              ),
+          }),
+          Effect.flatMap((_) => filterSpectrumResult(_))
+        );
+      },
     };
   })
 );
+
+
+
+
