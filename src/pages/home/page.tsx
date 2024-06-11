@@ -44,6 +44,7 @@ import { EditControl } from "react-leaflet-draw";
 import {
   computeRoute,
   createATMIcon,
+  createBankIcon,
   createBranchIcon,
   createPOSIcon,
   defaultCenter,
@@ -249,6 +250,14 @@ export function Home() {
     [loaderData.branches]
   );
 
+  const competitors = useMemo(
+    () => O.fromNullable(loaderData.competitors),
+    [loaderData.competitors]
+  )
+
+  console.log(branches)
+  console.log(competitors)
+
   const branch = useMemo(
     () => pipe(O.fromNullable(search.get("branch")), O.filter(S.isNonEmpty)),
     [search]
@@ -270,6 +279,25 @@ export function Home() {
     );
   }, [branch, branches]);
 
+  const filteredCompetitors = useMemo(() => {
+    return pipe(
+      competitors,
+      O.map(
+        E.mapRight((competitors) => {
+          return pipe(
+            storeType,
+            O.match({
+              onNone: () => competitors.features,
+              onSome: (type) =>
+                competitors.features.filter(
+                  ({ properties }) => type == properties.type
+                ),
+            })
+          );
+        })
+      )
+    );
+  }, [storeType, competitors]);
   const filteredBranches = useMemo(() => {
     return pipe(
       branches,
@@ -326,6 +354,10 @@ export function Home() {
 
   const [showIntroModal, setShowIntroModal] = useState(import.meta.env.DEV);
   const [tourStepsEnabled, setTourStepsEnabled] = useState(false);
+  const [showCompetitors, setShowCompetitors] = useState(false);
+
+  const toggleCompetitors = () => setShowCompetitors((prev) => !prev);
+
 
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -921,6 +953,161 @@ export function Home() {
       })
     );
   }, [filteredBranches, setSearch, dataVariant]);
+
+
+
+  const compertitorsMarkers = useMemo(() => {
+
+    if (!showCompetitors) return null;
+    return pipe(
+      filteredCompetitors,
+      O.match({
+        onNone: constNull,
+        onSome: E.match({
+          onLeft: constNull,
+          onRight(competitors) {
+            return (
+              <MarkerClusterGroup chunkedLoading>
+                {competitors.map(({ id, properties }) => {
+                  const lat = properties.latitude;
+                  const lng = properties.longitude;
+                  const bank = properties.bank_name 
+                  const { color, ...props } = properties;
+
+                  const icon =
+                      dataVariant === Variant.branch
+                        ? createBankIcon(bank)
+                        : dataVariant === Variant.pos
+                        ? createBankIcon(bank)
+                        : createBankIcon(bank);
+
+
+
+                  const map = mapRef.current;
+
+                  return (  
+                    <Marker
+                      key={id}
+                      icon={icon}
+                      position={[lat, lng]}
+                      eventHandlers={{
+                        popupclose() {
+                          // @ts-expect-error
+                          updateURLSearchWithoutNavigation("branch", null);
+                        },
+                        click() {
+                          if (id) {
+                            document
+                              .getElementById(id as any)
+                              ?.scrollIntoView();
+
+                            updateURLSearchWithoutNavigation(
+                              "branch",
+                              id.toString()
+                            );
+
+                            map?.flyTo([lat, lng], 18);
+                          }
+                        },
+                      }}
+                    >
+                      <Popup autoPan>
+                        <div className="space-y-4">
+                          {props.type ? (
+                            <div
+                              className="text-white rounded-md py-2 px-4"
+                              style={{ backgroundColor: color }}
+                            >
+                              <h2 className="font-semibold text-lg">
+                                {props.type}
+                              </h2>
+                            </div>
+                          ) : null}
+
+                          <div className="flex space-x-2 items-center justify-between">
+                            <div>
+                              <BiLocationPlus size={20} />
+                            </div>
+
+                            <div className="flex-1 space-y-1">
+                              <h5>
+                                <strong>
+                                  {dataVariant === Variant.atm
+                                    ? "Address"
+                                    : "Address"}
+                                </strong>
+                              </h5>
+
+                              <p>
+                                <strong>
+                                  {dataVariant === Variant.branch
+                                    ? props.address
+                                    : props.address}
+                                </strong>
+                              </p>
+                            </div>
+
+                            <Center height="30px">
+                              <Divider orientation="vertical" />
+                            </Center>
+
+                            <Button
+                              size="sm"
+                              onClick={() => setShowStreetview({ lat, lng })}
+                            >
+                              Street View
+                            </Button>
+                          </div>
+
+                          <div className="space-y-2">
+                            {/* {dataVariant === Variant.branch ? (
+                              <Button
+                                as="a"
+                                size="sm"
+                                target="_blank"
+                                className="w-full"
+                                rel="noopener noreferrer"
+                                href={appointmentBookingUrl}
+                              >
+                                Book Appointment
+                              </Button>
+                            ) : null} */}
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                map?.closePopup();
+
+                                setSearch((search) => {
+                                  search.set("d", `${lat},${lng}`);
+                                  return search;
+                                });
+                              }}
+                            >
+                              Get Directions
+                            </Button>
+                          </div>
+                        </div>
+                      </Popup>
+
+                      <Tooltip>
+                        {dataVariant === Variant.branch ? (
+                          <p>{props.branch_name}</p>
+                        ) : null}
+                        <p>{props.address}</p>
+                      </Tooltip>
+                    </Marker>
+                  );
+                })}
+              </MarkerClusterGroup>
+            );
+          },
+        }),
+      })
+    );
+  }, [filteredCompetitors, setSearch, dataVariant,showCompetitors]);
 
   const mapDataLayers = useMemo(() => {
     return pipe(
@@ -1558,6 +1745,12 @@ export function Home() {
               : null}
 
             {branchesMarkers}
+            {compertitorsMarkers}
+
+
+
+  
+
 
             {markerLatlng ? (
               <Marker
@@ -1823,8 +2016,9 @@ export function Home() {
                     </Button>
 
                     <Collapse in={isSelected === list.id} animateOpacity>
-                      <Button size="sm" variant="ghost" className="">
-                        Competition
+                      <Button size="sm" variant="ghost" className=""onClick={toggleCompetitors}
+                        >
+                           {showCompetitors ? "Clear" : "Competition"}
                       </Button>
                     </Collapse>
                   </Box>

@@ -18,7 +18,7 @@ export const BranchRepositoryLive = Layer.effect(
     Either.isRight(auth) ? console.log(auth.right.roles) : console.log("No")
 
 
-    const branches_mapName = `/CHANNELS/NamedMaps/FIRST_BANK`;
+    const branches_mapName = `/CHANNELS/NamedMaps/FCMB`;
 
     const POS_mapName = `/CHANNELS/NamedMaps/ZENITH_BANK`;
 
@@ -91,7 +91,7 @@ export const BranchRepositoryLive = Layer.effect(
                 :variant === Variant.pos  
                 ? competition_mapName : competition_mapName,
                 { type: "Point", coordinates: [lng, lat] },
-                { withinDistance: "5000 mi", maxFeatures: "5" }
+                { withinDistance: "5000 mi", maxFeatures: "10" }
               ),
           }),
           Effect.flatMap((_) => filterSpectrumResult(_))

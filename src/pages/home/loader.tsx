@@ -30,7 +30,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (search.get("clear") === "true") {
     return {
       branches: null,
-      latlng: null,
     };
   }
 
@@ -72,7 +71,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   
 
-  const branchesProgram2 = pipe(
+  const competitorProgram = pipe(
     searchType,
     O.match({
       onNone: () => Effect.succeed(null),
@@ -112,7 +111,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const result = await Effect.runPromise(
     Effect.all({
       // branches:tab === Tab.Branches ? BranchesProgram : Effect.succeed(null),
-      branches: tab === Tab.branches ? branchesProgram2 : Effect.succeed(null), 
+      branches: tab === Tab.branches ? branchesProgram : Effect.succeed(null),
+      competitors: tab === Tab.branches? competitorProgram : Effect.succeed(null)
     })
   );
 
@@ -120,6 +120,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     ...result,
     branches: result.branches,
+    competitors: result.competitors,
     latlng: O.getOrNull(latlng),   
   };
 }

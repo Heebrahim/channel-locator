@@ -64,13 +64,13 @@ function extractData(variant: Variant) {
           ? data.properties.BRANC_NAME
           : variant === Variant.pos
           ? data.properties.Agent_name
-          : data.properties.branch_nam,
+          : data.properties.BRANC_NAME,
       bank_name:
       variant === Variant.branch
         ? data.properties.BANK_NAME
         : variant === Variant.pos
         ? data.properties.Agent_name
-        : data.properties.branch_nam,
+        : data.properties.BANK_NAME,
   
 
       region: data.properties.Region ?? "",
