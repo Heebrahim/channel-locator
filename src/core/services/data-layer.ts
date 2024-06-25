@@ -13,6 +13,14 @@ export function getDataLayers() {
   );
 }
 
+
+export function getDataLayersForCompetitors() {
+  return pipe(
+    Effect.flatMap(DataLayerRepository, (repo) => repo.getAllCompetitors()),
+    Effect.map((result) => result.data)
+  );
+}
+
 export function findForLayerAt(
   layer: DataLayer,
   latlng: LatLng,

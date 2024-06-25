@@ -30,6 +30,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (search.get("clear") === "true") {
     return {
       branches: null,
+      competitors: null,
+      latlng: null
     };
   }
 
@@ -40,7 +42,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const searchType = pipe(
     O.fromNullable(search.get("searchType")),
-    O.filter(S.isNonEmpty)
+    O.filter(S.isNonEmpty),
+    O.getOrElse(() => SearchType.all)
   );
 
   const variant = pipe(
@@ -49,64 +52,65 @@ export async function loader({ request }: LoaderFunctionArgs) {
     O.getOrElse(() => Variant.branch)
   ) as Variant;
 
-  const branchesProgram = Effect.gen (function* (_){
-    const branches_ = yield* _(
-      pipe(
-        searchType,
-        O.match({
-          onNone: () => Effect.succeed(null),
-          onSome: (searchType) =>
-            pipe(
-              searchType === SearchType.nearest 
-                ? Effect.flatMap(latlng, (latlng) =>
-                    BranchService.getNearestBranches(latlng, variant)
-                  )
-                : BranchService.getBranches(variant),
-            ),
-        })
-      ) )
-    return branches_
-  }).pipe(Effect.provideLayer(layer), Effect.either)
+  // const branchesProgram = Effect.gen (function* (_){
+  //   const branches_ = yield* _(
+  //     pipe(
+  //       searchType,
+  //       O.match({
+  //         onNone: () => Effect.succeed(null),
+  //         onSome: (searchType) =>
+  //           pipe(
+  //             searchType === SearchType.nearest 
+  //               ? Effect.flatMap(latlng, (latlng) =>
+  //                   BranchService.getNearestBranches(latlng, variant)
+  //                 )
+  //               : BranchService.getBranches(variant),
+  //           ),
+  //       })
+  //     ) )
+  //   return branches_
+  // }).pipe(Effect.provideLayer(layer), Effect.either)
 
 
-  
-
-  const competitorProgram = pipe(
-    searchType,
-    O.match({
-      onNone: () => Effect.succeed(null),
-      onSome: (searchType) =>
-        pipe(
-          searchType === SearchType.nearest 
-            ? Effect.flatMap(latlng, (latlng) =>
-                BranchService.getNearestCompetitors(latlng, variant)
-              )
-            : BranchService.getCompetitors(variant),
-          Effect.provideLayer(layer),
-          Effect.either
-        ),
-    })
-  );
-
-  
-  // const defaultSearchType = isInternalUser() ? SearchType.all : SearchType.nearest;
-
-
-  // const BranchesProgram = pipe(
-  //   O.fromNullable(search.get("searchType")),
-  //   O.getOrElse(() => defaultSearchType), 
-  //   (searchType) => {
-  //     return pipe(
-  //       searchType === SearchType.nearest && parseLatLng(search.get("p"))
-  //         ? Effect.flatMap(parseLatLng(search.get("p")), (latlng) =>
-  //             BranchService.getNearestBranches(latlng, variant)
-  //           )
-  //         : BranchService.getBranches(variant),
-  //       Effect.provideLayer(layer),
-  //       Effect.either
-  //     );
-  //   }
+  // const competitorProgram = pipe(
+  //   searchType,
+  //   O.match({
+  //     onNone: () => Effect.succeed(null),
+  //     onSome: (searchType) =>
+  //       pipe(
+  //         searchType === SearchType.nearest 
+  //           ? Effect.flatMap(latlng, (latlng) =>
+  //               BranchService.getNearestCompetitors(latlng, variant)
+  //             )
+  //           : BranchService.getCompetitors(variant),
+  //         Effect.provideLayer(layer),
+  //         Effect.either
+  //       ),
+  //   })
   // );
+
+  const branchesProgram = Effect.gen(function* (_) {
+    if (searchType === SearchType.nearest) {
+      return yield* _(Effect.flatMap(latlng, (latlng) =>
+        BranchService.getNearestBranches(latlng, variant)
+      ));
+    } else {
+      return yield* _(BranchService.getBranches(variant));
+    }
+  }).pipe(Effect.provideLayer(layer), Effect.either);
+
+
+  const competitorProgram = Effect.gen(function* (_) {
+    if (searchType === SearchType.nearest) {
+      return yield* _(Effect.flatMap(latlng, (latlng) =>
+        BranchService.getNearestCompetitors(latlng, variant)
+      ));
+    } else {
+      return yield* _(BranchService.getCompetitors(variant));
+    }
+  }).pipe(Effect.provideLayer(layer), Effect.either);
+
+
 
   const result = await Effect.runPromise(
     Effect.all({

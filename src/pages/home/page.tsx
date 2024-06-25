@@ -49,6 +49,7 @@ import {
   createPOSIcon,
   defaultCenter,
   defaultZoom,
+  formatAddress,
   GeolocationPositionErrorCode,
   getCurrentPosition,
   getFeatureService,
@@ -203,7 +204,7 @@ function useURLSearchParams() {
 }
 
 export function Home() {
-  const loaderData = useLoaderData() as Awaited<ReturnType<typeof loader>>;
+  const loaderData = useLoaderData() as Awaited<ReturnType<typeof loader>> || null;
   // const [localLoaderData, setLocalLoaderData] = useState(loaderData);
 
 
@@ -255,8 +256,7 @@ export function Home() {
     [loaderData.competitors]
   )
 
-  console.log(branches)
-  console.log(competitors)
+
 
   const branch = useMemo(
     () => pipe(O.fromNullable(search.get("branch")), O.filter(S.isNonEmpty)),
@@ -298,6 +298,8 @@ export function Home() {
       )
     );
   }, [storeType, competitors]);
+
+
   const filteredBranches = useMemo(() => {
     return pipe(
       branches,
@@ -317,6 +319,7 @@ export function Home() {
       )
     );
   }, [storeType, branches]);
+
 
   // const storeTypes = useMemo(() => {
   //   type Groups = Record<
@@ -452,6 +455,22 @@ export function Home() {
     },
   });
 
+
+  const loaderDataLayersForCompetitors = useQuery({
+    queryKey: ["data-layers-competitors"],
+    enabled: showInternalTools,
+    queryFn() {
+      return DataLayerService.getDataLayersForCompetitors().pipe(
+        Effect.provideLayer(dataLayerEffectLayer),
+        Effect.either,
+        Effect.runPromise
+      );
+    },
+  });
+
+  console.log(loaderDataLayersForCompetitors)
+  console.log(loaderDataLayers)
+
   const area = search.get("area");
 
   const layers = search.get("layers");
@@ -526,10 +545,20 @@ export function Home() {
     return pipe(
       O.fromNullable(loaderDataLayers.data),
       O.map(
-        E.mapRight((layers) => layers.sort((a, b) => a.priority - b.priority))
+        E.mapRight((layers) => layers?.sort((a, b) => a.priority - b.priority))
       )
     );
   }, [loaderDataLayers.data]);
+
+
+  const dataLayersForCompetitors = useMemo( () => {
+    return pipe(
+      O.fromNullable(loaderDataLayersForCompetitors.data),
+      O.map(
+        E.mapRight((banks) => banks?.sort((a,b) => a.priority - b.priority))
+      )
+    )
+  }, [loaderDataLayersForCompetitors.data])
 
   const dataLayersByID = useMemo(() => {
     return pipe(
@@ -537,7 +566,7 @@ export function Home() {
       O.map(
         E.mapRight(
           flow(
-            A.map((_) => [_.id, _] as const),
+            A?.map((_) => [_.id, _] as const),
             (_) => Object.fromEntries(_)
           )
         )
@@ -956,6 +985,8 @@ export function Home() {
 
 
 
+
+
   const compertitorsMarkers = useMemo(() => {
 
     if (!showCompetitors) return null;
@@ -1180,6 +1211,74 @@ export function Home() {
     );
   }, [dataLayers, selectedDataLayers, setSearch]);
 
+  const mapDataLayersForCompetitors = useMemo(() => {
+    return pipe(
+      dataLayersForCompetitors,
+      O.match({
+        onNone: constNull,
+        onSome: E.match({
+          onLeft: constNull,
+          onRight(dataLayersForCompetitors) {
+            return (
+              <DataLayerControl position="topright">
+                {dataLayersForCompetitors?.map((banks) => {
+
+
+                  return (
+                    <div  className="whitespace-nowrap">
+                      <details className="whitespace-nowrap" >                  
+                        <summary key={banks.id}>
+                        {banks.bank}
+                        <p>{banks.data.map((lay) => { 
+
+                          const selected = selectedDataLayers.includes(lay.id);
+
+                          return (
+                            <div key={lay.id} className="whitespace-nowrap">
+                            <Checkbox
+                               key={lay.id}
+                               value={lay.id}
+                               isChecked={selected}
+                               onChange={(e) => {
+                                 const set = new Set(selectedDataLayers);
+       
+                                 if (e.target.checked) {
+                                   set.add(lay.id);
+                                 } else {
+                                   set.delete(lay.id);
+                                 }
+       
+                                 setSearch((search) => {
+                                   if (set.size > 0) {
+                                     search.set("layers", jsurl.stringify([...set]));
+                                   } else {
+                                     search.delete("layers");
+                                   }
+                                   return search;
+                                 });
+       
+                                 setSelectedDataLayers([...set]);
+                               }}
+                            
+                            >{lay.title}
+                            </Checkbox>                           
+                            </div>
+                          )            
+                        })}</p>
+                        </summary>
+                      </details>
+
+                    </div>
+                  );
+                })}
+              </DataLayerControl>
+            );
+          },
+        }),
+      })
+    );
+  }, [dataLayersForCompetitors  , selectedDataLayers, setSearch]);
+
   const drawnLayerBounds =
     drawnLayer instanceof L.Circle
       ? drawnLayer.getLatLng().toBounds(drawnLayer.getRadius()) // for some reason, calling `drawnLayer.getBounds()` throws an error
@@ -1249,7 +1348,7 @@ export function Home() {
                                   return (
                                     <li key={key} className="space-y-2">
                                       <div className="py-2 px-4 bg-[var(--brand)] rounded-md">
-                                        <h2 className="font-bold text-base whitespace-nowrap truncate">
+                                        <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
                                           {layer?.title} (Summary)
                                         </h2>
                                       </div>
@@ -1658,8 +1757,6 @@ export function Home() {
     },
   ];
 
-
-
   const lists = [
     { id: 1, name: "Branches", icon: IoStorefront, variant: Variant.branch},
     { id: 2, name: "POS Agents", icon: IoStorefront,  variant: Variant.pos},
@@ -1746,11 +1843,6 @@ export function Home() {
 
             {branchesMarkers}
             {compertitorsMarkers}
-
-
-
-  
-
 
             {markerLatlng ? (
               <Marker
@@ -1849,6 +1941,8 @@ export function Home() {
             {showInternalTools && baseMapRegistered ? (
               <>
                 {mapDataLayers}
+
+                {mapDataLayersForCompetitors}
 
                 <FeatureGroup>
                   <EditControl
@@ -2017,8 +2111,7 @@ export function Home() {
 
                     <Collapse in={isSelected === list.id} animateOpacity>
                       <Button size="sm" variant="ghost" className=""onClick={toggleCompetitors}
-                        >
-                           {showCompetitors ? "Clear" : "Competition"}
+                        >Competition
                       </Button>
                     </Collapse>
                   </Box>
@@ -2044,6 +2137,7 @@ export function Home() {
                   Competition
                 </Button>
               </Collapse> */}
+
               <div className="flex space-y-2 items-center justify-between">
                 <h5 className="font-semibold">Overview</h5>
 
@@ -2148,7 +2242,7 @@ export function Home() {
                                           }
                                         )}
                                         onClick={() => {
-                                          map?.flyTo(new L.LatLng(lat, lng), 16);
+                                          map?.flyTo(new L.LatLng(lat, lng), 18);
 
                                           if (id) {
                                             setSearch((search) => {
@@ -2158,7 +2252,7 @@ export function Home() {
                                           }
                                         }}
                                       >
-                                        <h4 className="font-medium text-lg">
+                                        <h4 className="font-medium text-sm">
                                           {props.branch_name}
                                         </h4>
 
@@ -2170,7 +2264,7 @@ export function Home() {
                                         </h6>
 
                                         <div className="text-sm space-y-2">
-                                          <p>Address: {props.address}</p>
+                                          <p className="">Address: {formatAddress(props.address)}</p>
                                           {loaderData.latlng ? (
                                             <DistanceBetween
                                               end={{ lat, lng }}

@@ -17,6 +17,13 @@ export interface DataLayerRepository {
     APIRes<Array<DataLayer>>
   >;
 
+
+  getAllCompetitors (): Effect.Effect<
+    never,
+    Err | JsonParseError | StatusError,
+    APIRes<Array<DataLayer>>  
+  >
+
   searchAt(
     layer: DataLayer,
     latlng: LatLng,
