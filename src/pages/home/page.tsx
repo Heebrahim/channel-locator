@@ -91,7 +91,14 @@ import clsx from "clsx";
 
 import { BiGridAlt, BiLocationPlus, BiUserCircle } from "react-icons/bi";
 
-import { IoHelp, IoPeople, IoStorefront, IoWifi, IoAdd, IoRemove } from "react-icons/io5";
+import {
+  IoHelp,
+  IoPeople,
+  IoStorefront,
+  IoWifi,
+  IoAdd,
+  IoRemove,
+} from "react-icons/io5";
 
 import {
   Box,
@@ -101,7 +108,6 @@ import {
   Collapse,
   Divider,
   Icon,
-
   Spinner,
   useToast,
 } from "@chakra-ui/react";
@@ -204,9 +210,9 @@ function useURLSearchParams() {
 }
 
 export function Home() {
-  const loaderData = useLoaderData() as Awaited<ReturnType<typeof loader>> || null;
+  const loaderData =
+    (useLoaderData() as Awaited<ReturnType<typeof loader>>) || null;
   // const [localLoaderData, setLocalLoaderData] = useState(loaderData);
-
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey,
@@ -226,15 +232,13 @@ export function Home() {
     [search]
   );
 
-  const [dataVariant, setDataVariant] = useState(() => 
+  const [dataVariant, setDataVariant] = useState(() =>
     pipe(
       O.fromNullable(search.get("variant")),
       O.filter(S.isNonEmpty),
-      O.getOrElse(() => Variant.branch)      
+      O.getOrElse(() => Variant.branch)
     )
-  )
-
-  console.log(loaderData);
+  );
 
   const searchType = useMemo(
     () =>
@@ -254,9 +258,7 @@ export function Home() {
   const competitors = useMemo(
     () => O.fromNullable(loaderData.competitors),
     [loaderData.competitors]
-  )
-
-
+  );
 
   const branch = useMemo(
     () => pipe(O.fromNullable(search.get("branch")), O.filter(S.isNonEmpty)),
@@ -299,7 +301,6 @@ export function Home() {
     );
   }, [storeType, competitors]);
 
-
   const filteredBranches = useMemo(() => {
     return pipe(
       branches,
@@ -319,7 +320,6 @@ export function Home() {
       )
     );
   }, [storeType, branches]);
-
 
   // const storeTypes = useMemo(() => {
   //   type Groups = Record<
@@ -360,7 +360,6 @@ export function Home() {
   const [showCompetitors, setShowCompetitors] = useState(false);
 
   const toggleCompetitors = () => setShowCompetitors((prev) => !prev);
-
 
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -455,7 +454,6 @@ export function Home() {
     },
   });
 
-
   const loaderDataLayersForCompetitors = useQuery({
     queryKey: ["data-layers-competitors"],
     enabled: showInternalTools,
@@ -468,8 +466,7 @@ export function Home() {
     },
   });
 
-  console.log(loaderDataLayersForCompetitors)
-  console.log(loaderDataLayers)
+  console.log(loaderDataLayers.data);
 
   const area = search.get("area");
 
@@ -482,8 +479,8 @@ export function Home() {
     enabled:
       area &&
       layers &&
-      !!loaderDataLayers.data &&
-      E.isRight(loaderDataLayers.data)
+      (!!loaderDataLayers.data || !!loaderDataLayersForCompetitors.data) &&
+      E.isRight(loaderDataLayers.data || loaderDataLayersForCompetitors.data)
         ? true
         : false,
     queryFn() {
@@ -538,31 +535,30 @@ export function Home() {
   });
 
   const [dataLayerSelectionResult, setDataLayerSelectionResult] = useState(
-    () => loaderDataLayersSelection.data
+    () => loaderDataLayersSelection.data || loader
   );
 
   const dataLayers = useMemo(() => {
     return pipe(
       O.fromNullable(loaderDataLayers.data),
       O.map(
-        E.mapRight((layers) => layers?.sort((a, b) => a.priority - b.priority))
+        E.mapRight((layers) => layers.sort((a, b) => a.priority - b.priority))
       )
     );
   }, [loaderDataLayers.data]);
 
-
-  const dataLayersForCompetitors = useMemo( () => {
+  const dataLayersForCompetitors = useMemo(() => {
     return pipe(
       O.fromNullable(loaderDataLayersForCompetitors.data),
       O.map(
-        E.mapRight((banks) => banks?.sort((a,b) => a.priority - b.priority))
+        E.mapRight((banks) => banks.sort((a, b) => a.priority - b.priority))
       )
-    )
-  }, [loaderDataLayersForCompetitors.data])
+    );
+  }, [loaderDataLayersForCompetitors.data]);
 
   const dataLayersByID = useMemo(() => {
     return pipe(
-      dataLayers,
+      dataLayers || dataLayersForCompetitors,
       O.map(
         E.mapRight(
           flow(
@@ -572,7 +568,7 @@ export function Home() {
         )
       )
     );
-  }, [dataLayers]);
+  }, [dataLayers, dataLayersForCompetitors]);
 
   // Where on the map a user clicks with a data layer selected
   const [dataLayerTarget, setDataLayerTarget] = useState<{
@@ -714,7 +710,7 @@ export function Home() {
 
       let radius = 0;
 
-      if (zoom > 18) {
+      if (zoom > 16) {
         radius = 10;
       } else if (zoom > 14) {
         radius = 50;
@@ -859,7 +855,7 @@ export function Home() {
 
                   const map = mapRef.current;
 
-                  return (  
+                  return (
                     <Marker
                       key={id}
                       icon={icon}
@@ -983,12 +979,7 @@ export function Home() {
     );
   }, [filteredBranches, setSearch, dataVariant]);
 
-
-
-
-
   const compertitorsMarkers = useMemo(() => {
-
     if (!showCompetitors) return null;
     return pipe(
       filteredCompetitors,
@@ -1002,21 +993,19 @@ export function Home() {
                 {competitors.map(({ id, properties }) => {
                   const lat = properties.latitude;
                   const lng = properties.longitude;
-                  const bank = properties.bank_name 
+                  const bank = properties.bank_name;
                   const { color, ...props } = properties;
 
                   const icon =
-                      dataVariant === Variant.branch
-                        ? createBankIcon(bank)
-                        : dataVariant === Variant.pos
-                        ? createBankIcon(bank)
-                        : createBankIcon(bank);
-
-
+                    dataVariant === Variant.branch
+                      ? createBankIcon(bank)
+                      : dataVariant === Variant.pos
+                      ? createBankIcon(bank)
+                      : createBankIcon(bank);
 
                   const map = mapRef.current;
 
-                  return (  
+                  return (
                     <Marker
                       key={id}
                       icon={icon}
@@ -1138,7 +1127,7 @@ export function Home() {
         }),
       })
     );
-  }, [filteredCompetitors, setSearch, dataVariant,showCompetitors]);
+  }, [filteredCompetitors, setSearch, dataVariant, showCompetitors]);
 
   const mapDataLayers = useMemo(() => {
     return pipe(
@@ -1218,56 +1207,59 @@ export function Home() {
         onNone: constNull,
         onSome: E.match({
           onLeft: constNull,
-          onRight(dataLayersForCompetitors) {
+          onRight(dataLayers) {
             return (
               <DataLayerControl position="topright">
-                {dataLayersForCompetitors?.map((banks) => {
-
+                {dataLayers.map((layer) => {
+                  const selected = selectedDataLayers.includes(layer.id);
 
                   return (
-                    <div  className="whitespace-nowrap">
-                      <details className="whitespace-nowrap" >                  
-                        <summary key={banks.id}>
-                        {banks.bank}
-                        <p>{banks.data.map((lay) => { 
+                    <div key={layer.id} className="whitespace-nowrap">
+                      <Checkbox
+                        key={layer.id}
+                        value={layer.id}
+                        isChecked={selected}
+                        onChange={(e) => {
+                          const set = new Set(selectedDataLayers);
 
-                          const selected = selectedDataLayers.includes(lay.id);
+                          if (e.target.checked) {
+                            set.add(layer.id);
+                          } else {
+                            set.delete(layer.id);
+                          }
 
-                          return (
-                            <div key={lay.id} className="whitespace-nowrap">
-                            <Checkbox
-                               key={lay.id}
-                               value={lay.id}
-                               isChecked={selected}
-                               onChange={(e) => {
-                                 const set = new Set(selectedDataLayers);
-       
-                                 if (e.target.checked) {
-                                   set.add(lay.id);
-                                 } else {
-                                   set.delete(lay.id);
-                                 }
-       
-                                 setSearch((search) => {
-                                   if (set.size > 0) {
-                                     search.set("layers", jsurl.stringify([...set]));
-                                   } else {
-                                     search.delete("layers");
-                                   }
-                                   return search;
-                                 });
-       
-                                 setSelectedDataLayers([...set]);
-                               }}
-                            
-                            >{lay.title}
-                            </Checkbox>                           
-                            </div>
-                          )            
-                        })}</p>
-                        </summary>
-                      </details>
+                          setSearch((search) => {
+                            if (set.size > 0) {
+                              search.set("layers", jsurl.stringify([...set]));
+                            } else {
+                              search.delete("layers");
+                            }
+                            return search;
+                          });
 
+                          setSelectedDataLayers([...set]);
+                        }}
+                      >
+                        {layer.title}
+                      </Checkbox>
+
+                      {selected ? (
+                        <ul className="p-2">
+                          {layer.legend.map((legend) => {
+                            return (
+                              <li key={legend.value} className="space-x-2">
+                                <span
+                                  className="w-4 h-4 inline-block align-middle"
+                                  style={{
+                                    backgroundColor: legend.color,
+                                  }}
+                                />
+                                <span>{legend.value}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -1277,7 +1269,74 @@ export function Home() {
         }),
       })
     );
-  }, [dataLayersForCompetitors  , selectedDataLayers, setSearch]);
+  }, [dataLayersForCompetitors, selectedDataLayers, setSearch]);
+
+  // const mapDataLayersForCompetitors = useMemo(() => {
+  //   return pipe(
+  //     dataLayersForCompetitors,
+  //     O.match({
+  //       onNone: constNull,
+  //       onSome: E.match({
+  //         onLeft: constNull,
+  //         onRight(dataLayersForCompetitors) {
+  //           return (
+  //             <DataLayerControl position="topright">
+  //               {dataLayersForCompetitors?.map((banks) => {
+
+  //                 return (
+  //                   <div  className="whitespace-nowrap">
+  //                     <details className="whitespace-nowrap" >
+  //                       <summary key={banks.id}>
+  //                       {banks.bank}
+  //                       <p>{banks.data.map((lay) => {
+
+  //                         const selected = selectedDataLayers.includes(lay.id);
+
+  //                         return (
+  //                           <div key={lay.id} className="whitespace-nowrap">
+  //                           <Checkbox
+  //                              key={lay.id}
+  //                              value={lay.id}
+  //                              isChecked={selected}
+  //                              onChange={(e) => {
+  //                                const set = new Set(selectedDataLayers);
+
+  //                                if (e.target.checked) {
+  //                                  set.add(lay.id);
+  //                                } else {
+  //                                  set.delete(lay.id);
+  //                                }
+
+  //                                setSearch((search) => {
+  //                                  if (set.size > 0) {
+  //                                    search.set("layers", jsurl.stringify([...set]));
+  //                                  } else {
+  //                                    search.delete("layers");
+  //                                  }
+  //                                  return search;
+  //                                });
+
+  //                                setSelectedDataLayers([...set]);
+  //                              }}
+
+  //                           >{lay.title}
+  //                           </Checkbox>
+  //                           </div>
+  //                         )
+  //                       })}</p>
+  //                       </summary>
+  //                     </details>
+
+  //                   </div>
+  //                 );
+  //               })}
+  //             </DataLayerControl>
+  //           );
+  //         },
+  //       }),
+  //     })
+  //   );
+  // }, [dataLayersForCompetitors  , selectedDataLayers, setSearch]);
 
   const drawnLayerBounds =
     drawnLayer instanceof L.Circle
@@ -1436,8 +1495,6 @@ export function Home() {
     selectedDataLayers.length,
     setSearch,
   ]);
-
-
 
   const dataLayerPoint = useMemo(() => {
     return dataLayerTarget && dataLayerPointQuery.data
@@ -1717,7 +1774,6 @@ export function Home() {
   //   setLocalLoaderData(loaderData);
   // }, [loaderData]);
 
-
   const tabSearchType = pipe(
     searchType,
     O.match({
@@ -1758,15 +1814,14 @@ export function Home() {
   ];
 
   const lists = [
-    { id: 1, name: "Branches", icon: IoStorefront, variant: Variant.branch},
-    { id: 2, name: "POS Agents", icon: IoStorefront,  variant: Variant.pos},
-    { id: 3, name: "ATM", icon: IoStorefront, variant: Variant.atm},
+    { id: 1, name: "Branches", icon: IoStorefront, variant: Variant.branch },
+    { id: 2, name: "POS Agents", icon: IoStorefront, variant: Variant.pos },
+    { id: 3, name: "ATM", icon: IoStorefront, variant: Variant.atm },
   ];
 
   const toggle = (id) => {
     setIsSelected(isSelected === id ? null : id);
-
-  }
+  };
 
   return (
     <>
@@ -1788,6 +1843,34 @@ export function Home() {
             {loaderDataLayers.data
               ? pipe(
                   loaderDataLayers.data,
+                  E.match({
+                    onLeft: constNull,
+                    onRight(layers) {
+                      return layers
+                        .filter((layer) =>
+                          selectedDataLayers.includes(layer.id)
+                        )
+                        .map((layer) => {
+                          return (
+                            <WMSTileLayer
+                              transparent
+                              layers="nmc"
+                              opacity={0.7}
+                              key={layer.id}
+                              format="image/png"
+                              id={layer.id.toString()}
+                              url={`${layerURL}?layer=${layer.mapName}`}
+                            />
+                          );
+                        });
+                    },
+                  })
+                )
+              : null}
+
+            {loaderDataLayersForCompetitors.data
+              ? pipe(
+                  loaderDataLayersForCompetitors.data,
                   E.match({
                     onLeft: constNull,
                     onRight(layers) {
@@ -1941,7 +2024,6 @@ export function Home() {
             {showInternalTools && baseMapRegistered ? (
               <>
                 {mapDataLayers}
-
                 {mapDataLayersForCompetitors}
 
                 <FeatureGroup>
@@ -2083,17 +2165,15 @@ export function Home() {
                       as={Link}
                       size="sm"
                       onClick={() => {
-                        toggle(list.id)
-                        setDataVariant(list.variant)                      
+                        toggle(list.id);
+                        setDataVariant(list.variant);
                       }}
                       className={clsx(
                         "w-full flex justify-between items-center "
                       )}
                       leftIcon={<Icon as={list.icon} />}
                       variant={
-                        dataVariant === list.variant
-                          ? "solid"
-                          : "outline" 
+                        dataVariant === list.variant ? "solid" : "outline"
                       }
                       to={
                         list.name === "Branches"
@@ -2110,8 +2190,13 @@ export function Home() {
                     </Button>
 
                     <Collapse in={isSelected === list.id} animateOpacity>
-                      <Button size="sm" variant="ghost" className=""onClick={toggleCompetitors}
-                        >Competition
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className=""
+                        onClick={toggleCompetitors}
+                      >
+                        Competition
                       </Button>
                     </Collapse>
                   </Box>
@@ -2148,7 +2233,7 @@ export function Home() {
                       onChange={(e) => {
                         setSearch((search) => {
                           search.set("searchType", e.target.value);
-                          search.delete("clear")
+                          search.delete("clear");
                           return search;
                         });
                       }}
@@ -2167,10 +2252,11 @@ export function Home() {
                           search.delete("d");
                           search.delete("branch");
                           search.delete("searchType");
-                          search.set("clear", "true")
+                          search.set("clear", "true");
                           return search;
                         },
-                        { replace: true })          
+                        { replace: true }
+                      );
                       // setLocalLoaderData({ branches: null})
                     }}
                   >
@@ -2178,115 +2264,113 @@ export function Home() {
                   </Button>
                 </div>
               </div>
-
             </div>
           </div>
-
         </div>
-        
+
         <div className="flex-1 flex flex-col lg:overflow-y-auto">
-                {tab === Tab.branches ? (
-                  <div className="flex-1  px-4">
-                    {pipe(
-                      filteredBranches,
-                      O.match({ 
-                        onNone: () =>
-                          navigation.state === "loading" ? <Loader /> : null,
-                        onSome: E.match({
-                          onLeft: (error) => {
-                            return (
-                              <>
-                                {error.message === undefined ? (
-                                  <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ rotate: 360, scale: 1 }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 260,
-                                      damping: 20,
-                                    }}
-                                    className="h-full m-auto items-center space-y-2 flex justify-center"
+          {tab === Tab.branches ? (
+            <div className="flex-1  px-4">
+              {pipe(
+                filteredBranches,
+                O.match({
+                  onNone: () =>
+                    navigation.state === "loading" ? <Loader /> : null,
+                  onSome: E.match({
+                    onLeft: (error) => {
+                      return (
+                        <>
+                          {error.message === undefined ? (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ rotate: 360, scale: 1 }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 260,
+                                damping: 20,
+                              }}
+                              className="h-full m-auto items-center space-y-2 flex justify-center"
+                            >
+                              <p className="text-lg">Make a search first!</p>
+                            </motion.div>
+                          ) : (
+                            <LoadError />
+                          )}
+                          {/* <LoadError /> */}
+                        </>
+                      );
+                    },
+                    onRight: (branches) => {
+                      return (
+                        <>
+                          <ul className="space-y-4">
+                            {branches.map(({ id, properties: props }) => {
+                              const lat = props.latitude;
+                              const lng = props.longitude;
+
+                              return (
+                                <li
+                                  key={id}
+                                  id={id?.toString()}
+                                  className={clsx(
+                                    "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand-light)] rounded-md cursor-pointer",
+                                    {
+                                      ["border-blue-900"]: pipe(
+                                        branch,
+                                        O.match({
+                                          onNone: constFalse,
+                                          onSome: (branch) =>
+                                            branch == id?.toString(),
+                                        })
+                                      ),
+                                    }
+                                  )}
+                                  onClick={() => {
+                                    map?.flyTo(new L.LatLng(lat, lng), 18);
+
+                                    if (id) {
+                                      setSearch((search) => {
+                                        search.set("branch", id.toString());
+                                        return search;
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <h4 className="font-medium text-sm">
+                                    {props.branch_name}
+                                  </h4>
+
+                                  <h6
+                                    className="text-sm"
+                                    style={{ color: props.color }}
                                   >
-                                    <p className="text-lg">Make a search first!</p>
-                                  </motion.div>
-                                ) : (
-                                  <LoadError />
-                                )}
-                                {/* <LoadError /> */}
-                              </>
-                            );
-                          },
-                          onRight: (branches) => {
-                            return (
-                              <>
-                                <ul className="space-y-4">
-                                  {branches.map(({ id, properties: props }) => {
-                                    const lat = props.latitude;
-                                    const lng = props.longitude;
+                                    {props.type}
+                                  </h6>
 
-                                    return (
-                                      <li
-                                        key={id}
-                                        id={id?.toString()}
-                                        className={clsx(
-                                          "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand-light)] rounded-md cursor-pointer",
-                                          {
-                                            ["border-blue-900"]: pipe(
-                                              branch,
-                                              O.match({
-                                                onNone: constFalse,
-                                                onSome: (branch) =>
-                                                  branch == id?.toString(),
-                                              })
-                                            ),
-                                          }
-                                        )}
-                                        onClick={() => {
-                                          map?.flyTo(new L.LatLng(lat, lng), 18);
-
-                                          if (id) {
-                                            setSearch((search) => {
-                                              search.set("branch", id.toString());
-                                              return search;
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        <h4 className="font-medium text-sm">
-                                          {props.branch_name}
-                                        </h4>
-
-                                        <h6
-                                          className="text-sm"
-                                          style={{ color: props.color }}
-                                        >
-                                          {props.type}
-                                        </h6>
-
-                                        <div className="text-sm space-y-2">
-                                          <p className="">Address: {formatAddress(props.address)}</p>
-                                          {loaderData.latlng ? (
-                                            <DistanceBetween
-                                              end={{ lat, lng }}
-                                              start={loaderData.latlng}
-                                            />
-                                          ) : null}
-                                        </div>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </>
-                            );
-                          },
-                        }),
-                      })
-                    )}
-                  </div>
-                ) : null}
+                                  <div className="text-sm space-y-2">
+                                    <p className="">
+                                      Address: {formatAddress(props.address)}
+                                    </p>
+                                    {loaderData.latlng ? (
+                                      <DistanceBetween
+                                        end={{ lat, lng }}
+                                        start={loaderData.latlng}
+                                      />
+                                    ) : null}
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </>
+                      );
+                    },
+                  }),
+                })
+              )}
+            </div>
+          ) : null}
         </div>
-
-      
 
         <div className="flex justify-between px-4">
           {showInternalTools ? (

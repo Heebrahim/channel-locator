@@ -861,20 +861,43 @@ const dataLayerStatic: APIRes<DataLayer[]> = {
 
 
     return {
+      // getAll() {
+      //   return pipe(
+      //     Http.get("/map-layer/my"),
+      //     Res.filterStatusOk(),
+      //     Res.toJson<APIRes<DataLayer[]>>(),
+      //     http.make
+      //   );
+      //   // return Effect.succeed(dataLayerStatic);
+      // },
+
       getAll() {
         return pipe(
           Http.get("/map-layer/my"),
           Res.filterStatusOk(),
-          Res.toJson<APIRes<DataLayer[]>>(),
+          Res.toJson<DataLayer[]>(),
           http.make
         );
-        // return Effect.succeed(dataLayerStatic);
       },
+
+      // getAll() {
+      //   return pipe(
+      //     Http.get("/home/map-layers"),
+      //     Res.filterStatusOk(),
+      //     Res.toJson<APIRes<DataLayer[]>>(),
+      //     http.make
+      //   );
+      // },
+
+      // getAllCompetitors() {
+      //     return  Effect.succeed(dataLayerStatic)
+      // },
 
       getAllCompetitors () {
         return pipe(
-          Http.get("/map-layer/competitions"),
-          Res.toJson<APIRes<DataLayer[]>>(),
+          Http.get("/map-layer/competitors"),
+          Res.filterStatusOk(),
+          Res.toJson<DataLayer[]>(),
           http.make
         )
       },

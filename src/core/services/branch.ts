@@ -13,7 +13,7 @@ import { getAuth } from "@/common/authUtil";
 
 
 const auth = getAuth()
-Either.isRight(auth) ? console.log(auth.right.roles) : console.log("NO")
+Either.isRight(auth) ? console.log(auth.right.role) : console.log("NO")
 
 
 
@@ -109,9 +109,6 @@ export function getCompetitors(variant: Variant) {
     // Effect.flatMap(S.parseEither(S.array(Branch)))
   );
 }
-
-
-
 
 export function getNearestBranches(
   latlng: { lat: number; lng: number },

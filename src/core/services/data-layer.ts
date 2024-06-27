@@ -7,17 +7,13 @@ import { SearchAtPointOptions } from "@/libs/spectrum/services/FeatureService";
 import { LatLng } from "../types/misc";
 
 export function getDataLayers() {
-  return pipe(
+  return  pipe(
     Effect.flatMap(DataLayerRepository, (repo) => repo.getAll()),
-    Effect.map((result) => result.data)
-  );
-}
-
-
+    )
+  }
 export function getDataLayersForCompetitors() {
   return pipe(
-    Effect.flatMap(DataLayerRepository, (repo) => repo.getAllCompetitors()),
-    Effect.map((result) => result.data)
+    Effect.flatMap(DataLayerRepository, (repo) => repo.getAllCompetitors())
   );
 }
 

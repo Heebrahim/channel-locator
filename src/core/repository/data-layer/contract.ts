@@ -14,14 +14,14 @@ export interface DataLayerRepository {
   getAll(): Effect.Effect<
     never,
     Err | JsonParseError | StatusError,
-    APIRes<Array<DataLayer>>
+    DataLayer[]
   >;
 
 
   getAllCompetitors (): Effect.Effect<
     never,
     Err | JsonParseError | StatusError,
-    APIRes<Array<DataLayer>>  
+    DataLayer[] 
   >
 
   searchAt(

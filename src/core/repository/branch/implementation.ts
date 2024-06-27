@@ -24,7 +24,7 @@ export const BranchRepositoryLive = Layer.effect(
 
     const ATM_mapName = `/CHANNELS/NamedMaps/UNION_BANK`;
 
-    const competition_mapName = `/CHANNELS/NamedMaps/BANKS_MERGED`
+    const competition_mapName = `/CHANNELS/NamedMaps/BANKS_MERGED`;
 
     return {
       findAll(variant) {

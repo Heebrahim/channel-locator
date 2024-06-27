@@ -21,6 +21,9 @@ import { RouteResponse, Tab } from "./types";
 
 export const isOnInternalUrl = window.location.href === internalAppUrl;
 
+// List of Missing icon
+//Access, citi, Eco, Globus, heritage, jaiz, keystone, lotus,providus, suntrust, tajbank, UBA, Union,
+
 const bankIcons = {
 
   "ACCESS": ``,
@@ -249,7 +252,7 @@ export const mappingService = `${spectrumServerUrl}/rest/Spatial/MappingService`
 
 // export const storesMapName = "/COVERAGES/NamedMaps/MTNN Walk-in Shops";
 
-export const layerURL = `${apiUrl}/home/layer-tile`;
+export const layerURL = `${apiUrl}/map-layer/layer-tile`;
 
 export function getFeatureService() {
   return createFeatureService(featureServiceUrl);
