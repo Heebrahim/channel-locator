@@ -3,7 +3,6 @@ import * as Effect from "@effect/io/Effect";
 import { Err } from "http-kit";
 import { JsonParseError, StatusError } from "http-kit/response";
 import { DataLayer } from "../../models/data-layer";
-import { APIRes } from "../../types/api";
 
 import { LatLng } from "@/core/types/misc";
 import { SearchAtPointOptions } from "@/libs/spectrum/services/FeatureService";

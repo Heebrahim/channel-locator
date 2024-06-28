@@ -1,5 +1,4 @@
 import * as Effect from "@effect/io/Effect";
-import * as Either from "@effect/data/Either"
 import * as Layer from "@effect/io/Layer";
 import { pipe } from "@effect/data/Function";
 
@@ -14,11 +13,12 @@ export const BranchRepositoryLive = Layer.effect(
   BranchRepository,
   Effect.gen(function* (_) {
     const service = yield* _(FeatureService);
+
     const auth = getAuth()
-    Either.isRight(auth) ? console.log(auth.right.roles) : console.log("No")
+    const tableName = auth.right.organisation.tableName
 
 
-    const branches_mapName = `/CHANNELS/NamedMaps/FCMB`;
+    const branches_mapName = `/CHANNELS/NamedMaps/${tableName}`;
 
     const POS_mapName = `/CHANNELS/NamedMaps/ZENITH_BANK`;
 

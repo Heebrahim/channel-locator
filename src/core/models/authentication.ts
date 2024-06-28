@@ -14,7 +14,7 @@ export const Authentication = S.struct({
   refreshToken: S.string,
   type: S.literal("Bearer"),
   firstTimeLoggedIn: S.boolean,
-  role: S.union(S.literal("ROLE_SUPER_ADMIN"), S.literal("ROLE_ADMIN")),
+  role: S.union(S.literal("ROLE_SUPER_ADMIN"), S.literal("ROLE_ADMIN"), S.literal("ROLE_USER")),
   organisation: S.union(Organisation, S.null)
 });
 

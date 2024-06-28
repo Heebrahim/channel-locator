@@ -479,8 +479,8 @@ export function Home() {
     enabled:
       area &&
       layers &&
-      (!!loaderDataLayers.data || !!loaderDataLayersForCompetitors.data) &&
-      E.isRight(loaderDataLayers.data || loaderDataLayersForCompetitors.data)
+      !!loaderDataLayers.data &&
+      E.isRight(loaderDataLayers.data)
         ? true
         : false,
     queryFn() {
@@ -558,7 +558,7 @@ export function Home() {
 
   const dataLayersByID = useMemo(() => {
     return pipe(
-      dataLayers || dataLayersForCompetitors,
+      dataLayers,
       O.map(
         E.mapRight(
           flow(
@@ -568,7 +568,23 @@ export function Home() {
         )
       )
     );
-  }, [dataLayers, dataLayersForCompetitors]);
+  }, [dataLayers]);
+
+
+  const dataLayersByIDForCompetitors = useMemo(() => {
+    return pipe(
+      dataLayers,
+      O.map(
+        E.mapRight(
+          flow(
+            A?.map((_) => [_.id, _] as const),
+            (_) => Object.fromEntries(_)
+          )
+        )
+      )
+    );
+  }, [dataLayersForCompetitors]);
+
 
   // Where on the map a user clicks with a data layer selected
   const [dataLayerTarget, setDataLayerTarget] = useState<{
@@ -694,6 +710,9 @@ export function Home() {
       Effect.runFork
     );
   }, [map, toast, setSearch]);
+
+
+  console.log(dataLayerTarget)
 
   const dataLayerPointQuery = useQuery({
     refetchInterval: false,
@@ -1129,6 +1148,27 @@ export function Home() {
     );
   }, [filteredCompetitors, setSearch, dataVariant, showCompetitors]);
 
+  const handleCheckboxChange = (layerId) => (e) => {
+    const set = new Set(selectedDataLayers);
+
+    if (e.target.checked) {
+      set.add(layerId);
+    } else {
+      set.delete(layerId);
+    }
+
+    setSearch((search) => {
+      if (set.size > 0) {
+        search.set("layers", jsurl.stringify([...set]));
+      } else {
+        search.delete("layers");
+      }
+      return search;
+    });
+
+    setSelectedDataLayers([...set]);
+  };
+
   const mapDataLayers = useMemo(() => {
     return pipe(
       dataLayers,
@@ -1139,137 +1179,161 @@ export function Home() {
           onRight(dataLayers) {
             return (
               <DataLayerControl position="topright">
-                {dataLayers.map((layer) => {
-                  const selected = selectedDataLayers.includes(layer.id);
+                <div className="flex flex-col">
+                  <div>
+                    <h2 className="font-bold">My Bank</h2>
 
-                  return (
-                    <div key={layer.id} className="whitespace-nowrap">
-                      <Checkbox
-                        key={layer.id}
-                        value={layer.id}
-                        isChecked={selected}
-                        onChange={(e) => {
-                          const set = new Set(selectedDataLayers);
+                    {dataLayers.map((layer) => {
+                      const selected = selectedDataLayers.includes(layer.id);
 
-                          if (e.target.checked) {
-                            set.add(layer.id);
-                          } else {
-                            set.delete(layer.id);
-                          }
+                      return (
+                        <div key={layer.id} className="whitespace-nowrap">
+                          <Checkbox
+                            key={layer.id}
+                            value={layer.id}
+                            isChecked={selected}
+                            onChange={handleCheckboxChange(layer.id)}
+                          >
+                            {layer.title}
+                          </Checkbox>
 
-                          setSearch((search) => {
-                            if (set.size > 0) {
-                              search.set("layers", jsurl.stringify([...set]));
-                            } else {
-                              search.delete("layers");
+                          {selected ? (
+                            <ul className="p-2">
+                              {layer.legend.map((legend) => {
+                                return (
+                                  <li key={legend.value} className="space-x-2">
+                                    <span
+                                      className="w-4 h-4 inline-block align-middle"
+                                      style={{
+                                        backgroundColor: legend.color,
+                                      }}
+                                    />
+                                    <span>{legend.value}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div>
+                    <h2>Competitions</h2>
+                    {
+                      pipe(
+                        dataLayersForCompetitors,
+                        O.match({
+                          onNone: constNull,
+                          onSome: E.match({
+                            onLeft: constNull,
+                            onRight(dataLayersForCompetitors) {
+                              return dataLayersForCompetitors.map((layer) => {
+                                const selected = selectedDataLayers.includes(layer.id)
+
+                                return (
+
+                                  <div key={layer.id} className="whitespace-nowrap">
+                                  <Checkbox
+                                    key={layer.id}
+                                    value={layer.id}
+                                    isChecked={selected}
+                                    onChange={handleCheckboxChange(layer.id)}
+                                  >
+                                    {layer.title}
+                                  </Checkbox>
+  
+                                  {selected ? (
+                                    <ul className="p-2">
+                                      {layer.legend.map((legend) => {
+                                        return (
+                                          <li key={legend.value} className="space-x-2">
+                                            <span
+                                              className="w-4 h-4 inline-block align-middle"
+                                              style={{
+                                                backgroundColor: legend.color,
+                                              }}
+                                            />
+                                            <span>{legend.value}</span>
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  ) : null}
+                                </div>
+
+                                )
+                              })
                             }
-                            return search;
-                          });
+                          })
 
-                          setSelectedDataLayers([...set]);
-                        }}
-                      >
-                        {layer.title}
-                      </Checkbox>
-
-                      {selected ? (
-                        <ul className="p-2">
-                          {layer.legend.map((legend) => {
-                            return (
-                              <li key={legend.value} className="space-x-2">
-                                <span
-                                  className="w-4 h-4 inline-block align-middle"
-                                  style={{
-                                    backgroundColor: legend.color,
-                                  }}
-                                />
-                                <span>{legend.value}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                        })
+                      )
+                    }
+                  </div>
+                </div>
               </DataLayerControl>
             );
           },
         }),
       })
     );
-  }, [dataLayers, selectedDataLayers, setSearch]);
+  }, [dataLayers, dataLayersForCompetitors, selectedDataLayers, setSearch]);
 
-  const mapDataLayersForCompetitors = useMemo(() => {
-    return pipe(
-      dataLayersForCompetitors,
-      O.match({
-        onNone: constNull,
-        onSome: E.match({
-          onLeft: constNull,
-          onRight(dataLayers) {
-            return (
-              <DataLayerControl position="topright">
-                {dataLayers.map((layer) => {
-                  const selected = selectedDataLayers.includes(layer.id);
+  // const mapDataLayersForCompetitors = useMemo(() => {
+  //   return pipe(
+  //     dataLayersForCompetitors,
+  //     O.match({
+  //       onNone: constNull,
+  //       onSome: E.match({
+  //         onLeft: constNull,
+  //         onRight(dataLayers) {
+  //           return (
+  //             <DataLayerControl position="topright">
+  //               <h2 className="font-bold">Competitions</h2>
 
-                  return (
-                    <div key={layer.id} className="whitespace-nowrap">
-                      <Checkbox
-                        key={layer.id}
-                        value={layer.id}
-                        isChecked={selected}
-                        onChange={(e) => {
-                          const set = new Set(selectedDataLayers);
+  //               {dataLayers.map((layer) => {
+  //                 const selected = selectedDataLayers.includes(layer.id);
 
-                          if (e.target.checked) {
-                            set.add(layer.id);
-                          } else {
-                            set.delete(layer.id);
-                          }
+  //                 return (
+  //                   <div key={layer.id} className="whitespace-nowrap">
+  //                     <Checkbox
+  //                       key={layer.id}
+  //                       value={layer.id}
+  //                       isChecked={selected}
+  //                       onChange={handleCheckboxChange(layer.id)}
+  //                     >
+  //                       {layer.title}
+  //                     </Checkbox>
 
-                          setSearch((search) => {
-                            if (set.size > 0) {
-                              search.set("layers", jsurl.stringify([...set]));
-                            } else {
-                              search.delete("layers");
-                            }
-                            return search;
-                          });
-
-                          setSelectedDataLayers([...set]);
-                        }}
-                      >
-                        {layer.title}
-                      </Checkbox>
-
-                      {selected ? (
-                        <ul className="p-2">
-                          {layer.legend.map((legend) => {
-                            return (
-                              <li key={legend.value} className="space-x-2">
-                                <span
-                                  className="w-4 h-4 inline-block align-middle"
-                                  style={{
-                                    backgroundColor: legend.color,
-                                  }}
-                                />
-                                <span>{legend.value}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </DataLayerControl>
-            );
-          },
-        }),
-      })
-    );
-  }, [dataLayersForCompetitors, selectedDataLayers, setSearch]);
+  //                     {selected ? (
+  //                       <ul className="p-2">
+  //                         {layer.legend.map((legend) => {
+  //                           return (
+  //                             <li key={legend.value} className="space-x-2">
+  //                               <span
+  //                                 className="w-4 h-4 inline-block align-middle"
+  //                                 style={{
+  //                                   backgroundColor: legend.color,
+  //                                 }}
+  //                               />
+  //                               <span>{legend.value}</span>
+  //                             </li>
+  //                           );
+  //                         })}
+  //                       </ul>
+  //                     ) : null}
+  //                   </div>
+  //                 );
+  //               })}
+  //             </DataLayerControl>
+  //           );
+  //         },
+  //       }),
+  //     })
+  //   );
+  // }, [dataLayersForCompetitors, selectedDataLayers, setSearch]);
 
   // const mapDataLayersForCompetitors = useMemo(() => {
   //   return pipe(
@@ -1406,7 +1470,7 @@ export function Home() {
 
                                   return (
                                     <li key={key} className="space-y-2">
-                                      <div className="py-2 px-4 bg-[var(--brand)] rounded-md">
+                                      <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
                                         <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
                                           {layer?.title} (Summary)
                                         </h2>
@@ -1513,7 +1577,7 @@ export function Home() {
                   eventHandlers={{ popupclose: () => setDataLayerTarget(null) }}
                 >
                   <div className="space-y-2 data-layer-popup">
-                    <div className="py-2 px-4 bg-[var(--brand)] rounded-md">
+                    <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
                       <h2 className="font-bold text-base">{layer.title}</h2>
                     </div>
 
@@ -1783,6 +1847,7 @@ export function Home() {
   );
 
   const branchURLSearch = `tab=${Tab.branches}&searchType=${tabSearchType}&p=${lat},${lng}`;
+  const nearestURLSearch = `tab=${Tab.branches}&searchType=${SearchType.nearest}&p=${lat},${lng}`;
 
   const steps = [
     {
@@ -1815,8 +1880,13 @@ export function Home() {
 
   const lists = [
     { id: 1, name: "Branches", icon: IoStorefront, variant: Variant.branch },
-    { id: 2, name: "POS Agents", icon: IoStorefront, variant: Variant.pos },
-    { id: 3, name: "ATM", icon: IoStorefront, variant: Variant.atm },
+    {
+      id: 2,
+      name: "POS Agents (nearest)",
+      icon: IoStorefront,
+      variant: Variant.pos,
+    },
+    { id: 3, name: "ATM (nearest)", icon: IoStorefront, variant: Variant.atm },
   ];
 
   const toggle = (id) => {
@@ -2024,7 +2094,7 @@ export function Home() {
             {showInternalTools && baseMapRegistered ? (
               <>
                 {mapDataLayers}
-                {mapDataLayersForCompetitors}
+                {/* {mapDataLayersForCompetitors} */}
 
                 <FeatureGroup>
                   <EditControl
@@ -2178,9 +2248,9 @@ export function Home() {
                       to={
                         list.name === "Branches"
                           ? `/?${branchURLSearch}&variant=${Variant.branch}`
-                          : list.name === "POS Agents"
-                          ? `/?${branchURLSearch}&variant=${Variant.pos}`
-                          : `/?${branchURLSearch}&variant=${Variant.atm}`
+                          : list.name === "POS Agents (nearest)"
+                          ? `/?${nearestURLSearch}&variant=${Variant.pos}`
+                          : `/?${nearestURLSearch}&variant=${Variant.atm}`
                       }
                     >
                       <div className="flex justify-between w-full items-center">
@@ -2198,6 +2268,33 @@ export function Home() {
                       >
                         Competition
                       </Button>
+
+                      {list.name === "Branches" ? (
+                        <div className="flex space-y-2 px-3 items-center justify-between">
+                          <h5 className="font-semibold">Search Type</h5>
+
+                          <div className="flex items-center space-x-2">
+                            {showInternalTools ? (
+                              <select
+                                value={O.getOrElse(searchType, () => "")}
+                                onChange={(e) => {
+                                  setSearch((search) => {
+                                    search.set("searchType", e.target.value);
+                                    search.delete("clear");
+                                    return search;
+                                  });
+                                }}
+                              >
+                                <option>Select</option>
+                                <option value={SearchType.all}>All</option>
+                                <option value={SearchType.nearest}>
+                                  Nearest
+                                </option>
+                              </select>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
                     </Collapse>
                   </Box>
                 );
@@ -2222,8 +2319,29 @@ export function Home() {
                   Competition
                 </Button>
               </Collapse> */}
-
               <div className="flex space-y-2 items-center justify-between">
+                <h5 className="font-semibold">Overview</h5>
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    setSearch(
+                      (search) => {
+                        search.delete("d");
+                        search.delete("branch");
+                        search.delete("searchType");
+                        search.set("clear", "true");
+                        return search;
+                      },
+                      { replace: true }
+                    );
+                    // setLocalLoaderData({ branches: null})
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
+
+              {/* <div className="flex space-y-2 items-center justify-between">
                 <h5 className="font-semibold">Overview</h5>
 
                 <div className="flex items-center space-x-2">
@@ -2263,7 +2381,7 @@ export function Home() {
                     Clear
                   </Button>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
