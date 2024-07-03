@@ -466,7 +466,6 @@ export function Home() {
     },
   });
 
-  console.log(loaderDataLayers.data);
 
   const area = search.get("area");
 
@@ -534,8 +533,75 @@ export function Home() {
     },
   });
 
+  const loaderDataLayersSelectionForCompetitors = useQuery({
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    queryKey: ["data-layers-selection-for-competitors", area, layers],
+    enabled:
+      area &&
+      layers &&
+      !!loaderDataLayersForCompetitors.data &&
+      E.isRight(loaderDataLayersForCompetitors.data)
+        ? true
+        : false,
+    queryFn() {
+      const program = Effect.gen(function* (_) {
+        const _layers = yield* _(
+          O.fromNullable(layers),
+          O.filter(S.isNonEmpty),
+          O.map(S.trim),
+          O.map((_) => jsurl.parse(_) as number[]),
+          O.filter(A.isNonEmptyArray)
+        );
+
+        const _area = yield* _(
+          O.fromNullable(area),
+          O.filter(S.isNonEmpty),
+          O.map(S.trim),
+          O.map(jsurl.parse)
+        );
+
+        const dataLayers = yield* _(loaderDataLayersForCompetitors.data!);
+
+        const selectedLayers = dataLayers.filter((layer) =>
+          _layers.includes(layer.id)
+        );
+
+        const region = _area as
+          | { type: "circle"; radius: number; latlng: LatLng }
+          | { type: "polygon"; geometry: any };
+
+        return yield* _(
+          region.type === "circle"
+            ? DataLayerService.findForLayersAt(
+                selectedLayers,
+                region.latlng,
+                region.radius
+              )
+            : DataLayerService.findForLayersWithin(
+                selectedLayers,
+                region.geometry
+              )
+        );
+      });
+
+      return pipe(
+        program,
+        Effect.map((_) => _ as Record<number, FeatureCollection>),
+        Effect.provideLayer(dataLayerEffectLayer),
+        Effect.either,
+        Effect.runPromise
+      );
+    },
+  });
+
   const [dataLayerSelectionResult, setDataLayerSelectionResult] = useState(
     () => loaderDataLayersSelection.data || loader
+  );
+
+
+  const [dataLayerSelectionResultForCompetitors, setDataLayerSelectionResultForCompetitors] = useState(
+    () => loaderDataLayersSelectionForCompetitors.data || loader
   );
 
   const dataLayers = useMemo(() => {
@@ -556,6 +622,11 @@ export function Home() {
     );
   }, [loaderDataLayersForCompetitors.data]);
 
+  const mergeDataLayers = (dataLayer, dataLayerForCompetitor) => ({
+    ...dataLayer,
+    ...dataLayerForCompetitor
+  });
+
   const dataLayersByID = useMemo(() => {
     return pipe(
       dataLayers,
@@ -573,7 +644,7 @@ export function Home() {
 
   const dataLayersByIDForCompetitors = useMemo(() => {
     return pipe(
-      dataLayers,
+      dataLayersForCompetitors,
       O.map(
         E.mapRight(
           flow(
@@ -584,6 +655,22 @@ export function Home() {
       )
     );
   }, [dataLayersForCompetitors]);
+
+  const mergedDataLayersByID = useMemo(() => {
+    return pipe(
+      dataLayersByID,
+      O.flatMap(flow(E.getOrNull, O.fromNullable)),
+      O.map((_l) =>
+        pipe(
+          dataLayersByIDForCompetitors,
+          O.flatMap(flow(E.getOrNull, O.fromNullable)),
+          O.map((_c) => mergeDataLayers(_l, _c))
+        )
+      ),
+      O.flatten,
+      O.map((merged) => E.right(merged))
+    );
+  }, [dataLayersByID, dataLayersByIDForCompetitors]);
 
 
   // Where on the map a user clicks with a data layer selected
@@ -712,7 +799,6 @@ export function Home() {
   }, [map, toast, setSearch]);
 
 
-  console.log(dataLayerTarget)
 
   const dataLayerPointQuery = useQuery({
     refetchInterval: false,
@@ -721,7 +807,7 @@ export function Home() {
     queryKey: [
       "data-layer-point",
       zoom,
-      dataLayerTarget?.layer.id,
+      dataLayerTarget?.layer,
       dataLayerTarget?.point,
     ],
     queryFn: () => {
@@ -811,10 +897,11 @@ export function Home() {
       const selectedLayers = pipe(
         O.fromNullable(selectedDataLayersRef.current),
         O.getOrElse(() => [] as number[])
-      );
+      )
+
 
       pipe(
-        dataLayersByID,
+        mergedDataLayersByID,
         O.flatMap(flow(E.getOrNull, O.fromNullable)),
         O.flatMap((layers) =>
           pipe(
@@ -831,7 +918,7 @@ export function Home() {
         })
       );
     },
-    [isDrawing, dataLayersByID]
+    [isDrawing, mergedDataLayersByID]
   );
 
   const onMouseMove = useCallback((e: L.LeafletMouseEvent) => {
@@ -1560,6 +1647,155 @@ export function Home() {
     setSearch,
   ]);
 
+  const dataLayersSelectionForCompetitors = useMemo(() => {
+    return pipe(
+      O.Do,
+      O.bind("layers", () => dataLayersForCompetitors),
+      O.bind("result", () => O.fromNullable(dataLayerSelectionResultForCompetitors)),
+      O.match({
+        onNone: constNull,
+        onSome(_) {
+          return pipe(
+            E.all(_),
+            E.match({
+              onLeft: constNull,
+              onRight: ({ layers, result: data }) => {
+                return pipe(
+                  O.fromNullable(drawnLayerCenter),
+                  O.orElse(() =>
+                    pipe(
+                      A.head([...Object.values(data)]),
+                      O.filter((_) => _.features.length > 0),
+                      O.map((head) => {
+                        const geojson = L.geoJson(head);
+                        return geojson.getBounds().getCenter();
+                      })
+                    )
+                  ),
+                  O.match({
+                    onNone: constNull,
+                    onSome(center) {
+                      return (
+                        <>
+                          {Object.keys(data).map((key) => {
+                            const geojson =
+                              data[key as any as keyof typeof data];
+                            return <GeoJSON key={key} data={geojson} />;
+                          })}
+
+                          <Popup
+                            keepInView
+                            position={center}
+                            autoClose={false}
+                            closeButton={false}
+                            closeOnClick={false}
+                          >
+                            <div className="space-y-3 data-layer-popup">
+                              <ul className="py-2 space-y-2 divide-y">
+                                {Object.keys(data).map((k) => {
+                                  const key = k as unknown as keyof typeof data;
+                                  const { features } = data[key];
+
+                                  const layer = layers.find(
+                                    (layer) => layer.id == key
+                                  );
+
+                                  const group = groupLayerAttributesByCategory(
+                                    layer!
+                                  );
+
+                                  return (
+                                    <li key={key} className="space-y-2">
+                                      <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
+                                        <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
+                                          {layer?.title} (Summary)
+                                        </h2>
+                                      </div>
+
+                                      {Object.keys(group).map((k) => {
+                                        const key =
+                                          k as any as keyof typeof group;
+                                        const attrs = group[key];
+
+                                        return (
+                                          <details
+                                            key={key}
+                                            className="bg-white rounded-md py-2 px-4"
+                                          >
+                                            <summary>
+                                              <h4 className="capitalize font-medium text-lg inline align-middle px-2">
+                                                {key.toLowerCase()}
+                                              </h4>
+                                            </summary>
+
+                                            <ul className="divide-y">
+                                              {attrs.map((attr) => {
+                                                return (
+                                                  <li
+                                                    key={attr.value}
+                                                    className="py-2 space-y-0"
+                                                  >
+                                                    <h4 className="capitalize text-base text-gray-600 font-medium">
+                                                      {attr.value
+                                                        .replace(/_/g, " ")
+                                                        .toLowerCase()}
+                                                    </h4>
+
+                                                    <AttributeSummary
+                                                      attribute={attr}
+                                                      features={features}
+                                                    />
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          </details>
+                                        );
+                                      })}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => {
+                                  // // @ts-expect-error
+                                  // updateURLSearchWithoutNavigation("dl", null);
+
+                                  setDataLayerSelectionResultForCompetitors(undefined);
+
+                                  setSearch((search) => {
+                                    search.delete("area");
+                                    return search;
+                                  });
+                                }}
+                              >
+                                Close
+                              </Button>
+                            </div>
+                          </Popup>
+                        </>
+                      );
+                    },
+                  })
+                );
+              },
+            })
+          );
+        },
+      })
+    );
+  }, [
+    dataLayerSelectionResultForCompetitors,
+    drawnLayer,
+    toast,
+    navigate,
+    selectedDataLayers.length,
+    setSearch,
+  ]);
+
   const dataLayerPoint = useMemo(() => {
     return dataLayerTarget && dataLayerPointQuery.data
       ? pipe(
@@ -1669,7 +1905,11 @@ export function Home() {
 
   useEffect(() => {
     setDataLayerSelectionResult(loaderDataLayersSelection.data);
-  }, [loaderDataLayersSelection.data]);
+    setDataLayerSelectionResultForCompetitors(loaderDataLayersSelectionForCompetitors.data);
+
+  }, [loaderDataLayersSelection.data, loaderDataLayersSelectionForCompetitors.data]);
+
+
 
   useEffect(() => {
     mapRef.current = map;
@@ -1764,7 +2004,6 @@ export function Home() {
     if (navigation.state === "idle") {
       if (directionQuery.data && E.isRight(directionQuery.data)) {
         const route = directionQuery.data.right[0];
-        console.log(route);
 
         if (route) {
           const feature = L.polyline(
@@ -1786,6 +2025,19 @@ export function Home() {
           return;
         }
       }
+
+      if (dataLayerSelectionResultForCompetitors && E.isRight(dataLayerSelectionResultForCompetitors)) {
+        const result = dataLayerSelectionResultForCompetitors.right;
+
+        const data = [...Object.values(result)][0];
+
+        if (data && data.features.length > 0) {
+          map?.flyToBounds(L.geoJson(data).getBounds());
+          return;
+        }
+      }
+
+
 
       if (tab === Tab.branches) {
         if (O.isSome(selectedBranch)) {
@@ -1830,6 +2082,7 @@ export function Home() {
     filteredBranches,
     selectedBranch,
     dataLayerSelectionResult,
+    dataLayerSelectionResultForCompetitors,
     directionQuery.data,
     navigation.state,
   ]);
@@ -1969,6 +2222,7 @@ export function Home() {
             {streetview}
 
             {dataLayersSelection}
+            {dataLayersSelectionForCompetitors}
 
             {dataLayerPoint}
 
@@ -2051,6 +2305,28 @@ export function Home() {
                       size="xs"
                       className="w-fit"
                       onClick={() => loaderDataLayersSelection.refetch()}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <Loader />
+                )}
+              </Popup>
+            ) : null}
+
+            {drawnLayerCenter &&
+            (loaderDataLayersSelectionForCompetitors.isFetching ||
+              loaderDataLayersSelectionForCompetitors.isError) ? (
+              <Popup keepInView position={drawnLayerCenter}>
+                {loaderDataLayersSelectionForCompetitors.isError ? (
+                  <div className="flex flex-col items-center justify-center py-2 space-y-2">
+                    <span className="text-center">An error occurred.</span>
+
+                    <Button
+                      size="xs"
+                      className="w-fit"
+                      onClick={() => loaderDataLayersSelectionForCompetitors.refetch()}
                     >
                       Retry
                     </Button>

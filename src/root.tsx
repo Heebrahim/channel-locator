@@ -12,7 +12,9 @@ import * as Effect from "@effect/io/Effect";
 import { SessionStorageLive } from "@/core/adapters/storage/implementation";
 import { getAuthentication } from "@/core/services/authentication";
 
-const internalApp = import.meta.env.INTERNAL_APP_HOSTNAME;
+// const internalApp = import.meta.env.INTERNAL_APP_HOSTNAME;
+
+
 
 export function Root() {
   const navigation = useNavigation();
@@ -28,11 +30,9 @@ export function Root() {
     );
   }, [location.pathname]); // We use the pathname to ensure that this runs everytime the route changes
 
-  if(Either.isLeft(auth)) {
-    return <Navigate to="/login" />
-  }
 
-  if (window.location.href === internalApp) {
+
+  // if (window.location.href === internalApp) {
     if (Either.isLeft(auth)) {
       return <Navigate state={{ from: location }} replace to="/login" />;
     } else if (auth.right.firstTimeLoggedIn) {
@@ -40,7 +40,7 @@ export function Root() {
         <Navigate state={{ from: location }} replace to="/change-password" />
       );
     }
-  }
+  // }
 
   return (
     <>

@@ -15,7 +15,7 @@ export const BranchRepositoryLive = Layer.effect(
     const service = yield* _(FeatureService);
 
     const auth = getAuth()
-    const tableName = auth.right.organisation.tableName
+    const tableName = auth?.right?.organisation?.tableName
 
 
     const branches_mapName = `/CHANNELS/NamedMaps/${tableName}`;
