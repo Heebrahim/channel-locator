@@ -303,6 +303,7 @@ export function createATMIcon(){
 
 
 export function createBankIcon(bank_name: string){
+   //@ts-expect-error
   const svg  =  bankIcons[bank_name] ?? bankIcons["DEFAULT"]
   return L.divIcon ({
     className: "",

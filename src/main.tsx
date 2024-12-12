@@ -26,7 +26,7 @@ import { Root } from "./root";
 import {
   ChangePassword,
   action as changePasswordAction,
-} from "./pages/change-password/index.page.tsx";
+} from "./pages/change-password/page.tsx";
 
 const theme = extendTheme({
   colors: {

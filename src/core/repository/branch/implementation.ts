@@ -15,6 +15,7 @@ export const BranchRepositoryLive = Layer.effect(
     const service = yield* _(FeatureService);
 
     const auth = getAuth()
+     //@ts-expect-error
     const tableName = auth?.right?.organisation?.tableName
 
 

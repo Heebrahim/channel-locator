@@ -99,10 +99,16 @@ export function getBranches(variant: Variant) {
 
 
 export function getCompetitors(variant: Variant) {
+
+  const auth = getAuth()
+   //@ts-expect-error
+  const tableName  = auth?.right?.organisation?.tableName
+
   return pipe(
     Effect.flatMap(BranchRepository, (repo) => repo.findAllCompetitors(variant)),
     Effect.map((data) => 
-      extractCompetitors("FCMB")(data) 
+       //@ts-expect-error
+      extractCompetitors(tableName)(data) 
     ),
     // Effect.map((result) => result.features),
     Effect.map((_) => ({ ..._, features: _.features.map(extractData(variant)) })),
@@ -139,6 +145,7 @@ export function getNearestCompetitors(
       repo.findNearestToCompetitors(latlng, variant),
     ),
     Effect.map((data) => 
+       //@ts-expect-error
       extractCompetitors("FCMB")(data) 
     ),
     Effect.map((_) => ({

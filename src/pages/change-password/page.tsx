@@ -81,7 +81,7 @@ export function ChangePassword() {
         <div className="h-full flex items-center justify-center">
           <div
             className="lg:w-[35rem] lg:h-[35rem] w-[90%] h-[90%] bg-cover"
-            style={{ backgroundImage: "url(password.png)" }}
+            style={{ backgroundImage: "url(bg.jpg)" }}
           />
         </div>
 
