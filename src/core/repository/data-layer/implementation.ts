@@ -439,6 +439,267 @@ export const DataLayerRepositoryLive = Layer.effect(
 //   ]
 // }
 
+
+const staticAreaMapData: DataLayer[]  = [
+
+{
+  "id": 2020,
+  "title": "Population Cluster",
+  "description": "Area Map",
+  "tableName": "/CHANNELS/MAPDATA/Cluster_Population_2023",
+  "mapName": "/CHANNELS/MAPDATA/Cluster_Population_2023 Map",
+  "priority": 1,
+  "legend": [
+    {
+        "value": "51,000 - 691,000",
+        "color": "#0000FF"
+    },
+    {
+        "value": "29,000 - 51,000",
+        "color": "#3040FF"
+    },
+    {
+        "value": "17,000 - 29,000",
+        "color": "#7080FF"
+    },
+    {
+        "value": "9,000 - 17,000",
+        "color": "#A0C0FF"
+    },
+    {
+        "value": "0 - 9,000",
+        "color": "#D0FFFF"
+    }
+],
+  "attributes": [
+      {
+          "value": "CLUSTER",
+          "label": null,
+          "category": "DESCRIPTION",
+          "type": "STRING",
+          // @ts-expect-error
+          "alias": null,
+          "formula": "concat(\"CLUSTER\")"
+      },
+
+      {
+        "value": "LOCAL_GOVERNMENT",
+        "label": null,
+        "category": "DESCRIPTION",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "concat(\"LOCAL_GOVERNMENT\")"
+      },
+
+      {
+        "value": "STATE",
+        "label": null,
+        "category": "DESCRIPTION",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "concat(\"STATE\")"
+      },
+
+      {
+        "value": "POPULATION",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"POPULATION\")"
+      },
+
+      {
+        "value": "POPULATION_DENSITY",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"POPULATION_DENSITY\")"
+      },
+
+      {
+        "value": "Male_Population",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Male_Population\")"
+      },
+
+      {
+        "value": "Female_Population",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Female_Population\")"
+      },
+
+      {
+        "value": "Age_0_19",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Age_0_19\")"
+      },
+
+      {
+        "value": "Age_20_39",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Age_20_39\")"
+      },
+
+      {
+        "value": "Age_40_59",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Age_40_59\")"
+      },
+
+      {
+        "value": "Age_60_and_above",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"Age_60_and_above\")"
+      },
+
+      {
+        "value": "AREA_SQKM",
+        "label": null,
+        "category": "STATISTICS",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "sum(\"AREA_SQKM\")"
+      },
+      {
+        "value": "Count",
+        "label": null,
+        "category": "STATISTICS",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "count(\"STATE\")"
+      }
+
+  ]
+},
+
+{
+  "id": 20200,
+  "title": "Income Level",
+  "description": "Income Level",
+  "tableName": "/CHANNELS/MAPDATA/Income Level",
+  "mapName": "/CHANNELS/MAPDATA/Income_Level Map",
+  "priority": 1,
+  "legend": [
+    {
+      "value": "Very High Income",
+      "color": "#f40000"
+  },
+  {
+      "value": "High Income",
+      "color": "#F8B169"
+  },
+  {
+      "value": "Medium Income",
+      "color": "#4546FA"
+  },
+  {
+      "value": "Low Income",
+      "color": "#87F6EE"
+  },
+  {
+      "value": "Poor Income",
+      "color": "#DDDCDA"
+  }
+  ],
+  "attributes": [
+      {
+          "value": "Area_Name",
+          "label": null,
+          "category": "DESCRIPTION",
+          "type": "STRING",
+          // @ts-expect-error
+          "alias": null,
+          "formula": "concat(\"Area_Name\")"
+      },
+
+      {
+        "value": "LGA",
+        "label": null,
+        "category": "DESCRIPTION",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "concat(\"LGA\")"
+      },
+
+      {
+        "value": "State",
+        "label": null,
+        "category": "DESCRIPTION",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "concat(\"State\")"
+      },
+
+      {
+        "value": "Income_Level",
+        "label": null,
+        "category": "DESCRIPTION",
+        "type": "STRING",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "concat(\"Income_Level\")"
+      },
+
+      {
+        "value": "Count",
+        "label": null,
+        // @ts-expect-error
+        "category": "STATISTIC",
+        // @ts-expect-error
+        "type": "NUMBER",
+        // @ts-expect-error
+        "alias": null,
+        "formula": "count(\"Area_Name\")"
+      }
+
+  ]
+},
+
+]
+
 // const dataLayerStatic: APIRes<DataLayer[]> = {
 //   data: [
 //     {
@@ -857,8 +1118,6 @@ export const DataLayerRepositoryLive = Layer.effect(
 //   ],
 // };
 
-
-
     return {
       // getAll() {
       //   return pipe(
@@ -877,6 +1136,10 @@ export const DataLayerRepositoryLive = Layer.effect(
           Res.toJson<DataLayer[]>(),
           http.make
         );
+      },
+
+      getAreaMap(){
+        return Effect.succeed(staticAreaMapData)
       },
 
       // getAll() {

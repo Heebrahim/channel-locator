@@ -42,6 +42,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import { EditControl } from "react-leaflet-draw";
 
 import {
+  bankIcons,
   computeRoute,
   createATMIcon,
   createBankIcon,
@@ -90,6 +91,7 @@ import {
 import clsx from "clsx";
 
 import { BiLocationPlus, BiUserCircle } from "react-icons/bi";
+import { FaDownload } from "react-icons/fa";
 
 import {
   IoHelp,
@@ -128,8 +130,10 @@ import { useMediaQuery } from "@uidotdev/usehooks";
 import { HttpClientLive } from "@/common/http-client";
 import { SessionStorageLive } from "@/core/adapters/storage/implementation";
 import { DataLayerRepositoryLive } from "@/core/repository/data-layer/implementation";
+import { BranchRepositoryLive } from "@/core/repository/branch/implementation";
+
 import { Variant } from "@/core/repository/branch/contract";
-import { getAuthentication, invalidate } from "@/core/services/authentication";
+import { invalidate } from "@/core/services/authentication";
 import { findForLayerAt } from "@/core/services/data-layer";
 import { LatLng } from "@/core/types/misc";
 import { useQuery } from "@tanstack/react-query";
@@ -144,6 +148,7 @@ import { motion } from "framer-motion";
 import { Direction } from "./components/direction";
 
 import * as DataLayerService from "@/core/services/data-layer";
+import * as BranchService from "@/core/services/branch";
 
 import * as Http from "http-kit";
 import * as Fetch from "http-kit/fetch";
@@ -151,6 +156,9 @@ import * as Fetch from "http-kit/fetch";
 import { AttributeSummary } from "./components/attribute-summary";
 import { Search } from "./components/search";
 import { SidebarToggle } from "./components/sidebar-toggle";
+import { getAuth } from "@/common/authUtil";
+import { DataLayerControlForAreaName } from "./components/controls/data-layer/areaname";
+import { DefaultZommControl } from "./components/controls/data-layer/defaultzoom";
 
 const googleMapsApiKey = import.meta.env.VITE_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -182,9 +190,66 @@ function LoadError() {
   );
 }
 
+function convertToCSV(data: FeatureCollection) {
+  const csvRows = [];
+  const allAttributes = new Set();
+
+  for (const geojson of Object.values(data)) {
+    const { features } = geojson;
+    // @ts-expect-error
+    features.forEach((feature) => {
+      Object.keys(feature.properties).forEach((attr) => {
+        if (attr !== "MI_Style") {
+          allAttributes.add(attr);
+        }
+      });
+    });
+  }
+
+  const attributes = Array.from(allAttributes).sort();
+  csvRows.push(["Layer", ...attributes].join(","));
+
+  for (const [layerKey, geojson] of Object.entries(data)) {
+    const { features } = geojson;
+    // @ts-expect-error
+    features.forEach((feature) => {
+      const row = [layerKey];
+      attributes.forEach((attr) => {
+        // @ts-expect-error
+        row.push(feature.properties[attr] || "");
+      });
+      csvRows.push(row.join(","));
+    });
+  }
+
+  return csvRows.join("\n");
+}
+
+function downloadCSV(data: FeatureCollection) {
+  const csv = convertToCSV(data);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.setAttribute("hidden", "");
+  a.setAttribute("href", url);
+  a.setAttribute("download", "data.csv");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 const dataLayerEffectLayer = Layer.mergeAll(
   SessionStorageLive,
   DataLayerRepositoryLive.pipe(
+    Layer.use(HttpClientLive),
+    Layer.use(getFeatureService())
+  )
+);
+
+const branchesEffectLayer = Layer.mergeAll(
+  SessionStorageLive,
+  BranchRepositoryLive.pipe(
     Layer.use(HttpClientLive),
     Layer.use(getFeatureService())
   )
@@ -207,10 +272,44 @@ function useURLSearchParams() {
   ] as const;
 }
 
+function updateBrandColor(bankName: string) {
+  const bankColors = {
+    FCMB: "#6C2494",
+    UBA: "#CC2D11",
+    ZENITH: "#7C7E81",
+    GTB: "#D74809",
+    "PREMIUM TRUST BANK": "#302B2C",
+    "STANDARD CHARTERED BANK": "#3ED308",
+    OPTIMUS: "#616077",
+    "UNITY BANK": "#556473",
+    "PARALLEX BANK": "#CFAA72",
+    WEMA: "#A1125E",
+    ACCESS: "#004087",
+    CITIBANK: "#016BBB",
+    ECO: "#005377",
+    FIDELITY: "#4BBC45",
+    "FIRST BANK": "#03456B",
+    GLOBUS: "#D72535",
+    HERITAGE: "#4DBC41",
+    JAIZ: "#095e2a",
+    KEYSTONE: "#113D72",
+    LOTUS: "#113D72",
+    POLARIS: "#8A31AF",
+    PROVIDUS: "#E2AD39",
+    STERLING: "#D43337",
+    SUNTRUST: "#DE7824",
+    TAJBANK: "#DD1E12",
+    UNION: "#009ADC",
+  };
+  const root = document.documentElement;
+  // @ts-expect-error
+  const newColor = bankColors[bankName.toUpperCase()] || "var(--brand)";
+  root.style.setProperty("--brand", newColor);
+}
+
 export function Home() {
   const loaderData =
     (useLoaderData() as Awaited<ReturnType<typeof loader>>) || null;
-  // const [localLoaderData, setLocalLoaderData] = useState(loaderData);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey,
@@ -224,6 +323,8 @@ export function Home() {
   const [search, setSearch] = useURLSearchParams();
 
   const tab = useMemo(() => getTab(search.get("tab")), [search]);
+    // @ts-expect-error
+  const { lat, lng } = loaderData.latlng ?? defaultCenter;
 
   const storeType = useMemo(
     () => pipe(O.fromNullable(search.get("type")), O.filter(S.isNonEmpty)),
@@ -238,6 +339,14 @@ export function Home() {
     )
   );
 
+  const [markerLatlng, setLatLng] = useState(() => {
+   // @ts-expect-error
+
+    return !loaderData.latlng ? null : new L.LatLng(lat, lng);
+  });
+
+  
+
   const searchType = useMemo(
     () =>
       pipe(O.fromNullable(search.get("searchType")), O.filter(S.isNonEmpty)),
@@ -246,16 +355,29 @@ export function Home() {
 
   const zoom = stringToNumber(search.get("z")) ?? defaultZoom;
 
-  const { lat, lng } = loaderData.latlng ?? defaultCenter;
 
   const branches = useMemo(
     () => O.fromNullable(loaderData.branches),
     [loaderData.branches]
   );
 
+  const competitorQuery = useQuery({
+    queryKey: ["competitors"],
+    enabled: showInternalTools,
+    queryFn() {
+    // @ts-expect-error
+
+      return BranchService.getNearestCompetitors(markerLatlng, dataVariant).pipe(
+        Effect.provideLayer(branchesEffectLayer),
+        Effect.either,
+        Effect.runPromise
+      );
+    },
+  });
+
   const competitors = useMemo(
-    () => O.fromNullable(loaderData.competitors),
-    [loaderData.competitors]
+    () => O.fromNullable(competitorQuery.data),
+    [competitorQuery.data]
   );
 
   const branch = useMemo(
@@ -299,7 +421,7 @@ export function Home() {
     );
   }, [storeType, competitors]);
 
-  const filteredBranches = useMemo(() => {
+  const _filteredBranches = useMemo(() => {
     return pipe(
       branches,
       O.map(
@@ -319,6 +441,31 @@ export function Home() {
     );
   }, [storeType, branches]);
 
+  const filteredBranches = useMemo(() => {
+    return pipe(
+      branches,
+      O.map(
+        E.mapRight((branches) => {
+          const filtered = pipe(
+            storeType,
+            O.match({
+              onNone: () => branches.features,
+              onSome: (type) =>
+                branches.features.filter(
+                  ({ properties }) => type == properties.type
+                ),
+            })
+          );
+
+          return filtered.sort((a, b) =>
+            a.properties.bank_name.localeCompare(b.properties.bank_name)
+          );
+        })
+      )
+    );
+  }, [storeType, branches]);
+
+  console.log(filteredBranches, _filteredBranches);
   // const storeTypes = useMemo(() => {
   //   type Groups = Record<
   //     string,
@@ -353,17 +500,13 @@ export function Home() {
 
   const [showStreetview, setShowStreetview] = useState<LatLng | null>(null);
 
-  const [showIntroModal, setShowIntroModal] = useState(import.meta.env.DEV);
+  const [showIntroModal, setShowIntroModal] = useState(import.meta.env.PROD);
   const [tourStepsEnabled, setTourStepsEnabled] = useState(false);
   const [showCompetitors, setShowCompetitors] = useState(false);
 
-  const toggleCompetitors = () => setShowCompetitors((prev) => !prev);
-
   const [isDrawing, setIsDrawing] = useState(false);
 
-  const [markerLatlng, setLatLng] = useState(() => {
-    return !loaderData.latlng ? null : new L.LatLng(lat, lng);
-  });
+
 
   const [cursor, setCursor] = useState(() => {
     return { lat, lng, z: zoom };
@@ -440,11 +583,31 @@ export function Home() {
     },
   });
 
+  // @ts-expect-error
+
+
+  const mergeDataLayers = (dataLayer1, dataLayer2) => ({
+    ...dataLayer1,
+    ...dataLayer2,
+  });
+
   const loaderDataLayers = useQuery({
     queryKey: ["data-layers"],
     enabled: showInternalTools,
     queryFn() {
       return DataLayerService.getDataLayers().pipe(
+        Effect.provideLayer(dataLayerEffectLayer),
+        Effect.either,
+        Effect.runPromise
+      );
+    },
+  });
+ 
+  const loaderDataLayersForAreaMap = useQuery({
+    queryKey: ["data-layers-area-map"],
+    enabled: showInternalTools,
+    queryFn() {
+      return DataLayerService.getAreaMapDataLayers().pipe(
         Effect.provideLayer(dataLayerEffectLayer),
         Effect.either,
         Effect.runPromise
@@ -464,6 +627,45 @@ export function Home() {
     },
   });
 
+  // const mergedLoaderDataLayers = useQueries([
+  //   {
+  //     queryKey: ["data-layers"],
+  //     enabled: showInternalTools,
+  //     queryFn() {
+  //       return DataLayerService.getDataLayers().pipe(
+  //         Effect.provideLayer(dataLayerEffectLayer),
+  //         Effect.either,
+  //         Effect.runPromise
+  //       );
+  //     },
+  //   },
+  //   {
+  //     queryKey: ["data-layers-area-map"],
+  //     enabled: showInternalTools,
+  //     queryFn() {
+  //       return DataLayerService.getAreaMapDataLayers().pipe(
+  //         Effect.provideLayer(dataLayerEffectLayer),
+  //         Effect.either,
+  //         Effect.runPromise
+  //       );
+  //     },
+  //   },
+  //   {
+  //     queryKey: ["data-layers-competitors"],
+  //     enabled: showInternalTools,
+  //     queryFn() {
+  //       return DataLayerService.getDataLayersForCompetitors().pipe(
+  //         Effect.provideLayer(dataLayerEffectLayer),
+  //         Effect.either,
+  //         Effect.runPromise
+  //       );
+  //     },
+  //   },
+  // ]);
+
+  // console.log(mergedLoaderDataLayers, loaderDataLayers)
+
+  // console.log(mergedLoaderDataLayers.right)
 
   const area = search.get("area");
 
@@ -498,6 +700,68 @@ export function Home() {
         );
 
         const dataLayers = yield* _(loaderDataLayers.data!);
+
+        const selectedLayers = dataLayers.filter((layer) =>
+          _layers.includes(layer.id)
+        );
+
+        const region = _area as
+          | { type: "circle"; radius: number; latlng: LatLng }
+          | { type: "polygon"; geometry: any };
+
+        return yield* _(
+          region.type === "circle"
+            ? DataLayerService.findForLayersAt(
+                selectedLayers,
+                region.latlng,
+                region.radius
+              )
+            : DataLayerService.findForLayersWithin(
+                selectedLayers,
+                region.geometry
+              )
+        );
+      });
+
+      return pipe(
+        program,
+        Effect.map((_) => _ as Record<number, FeatureCollection>),
+        Effect.provideLayer(dataLayerEffectLayer),
+        Effect.either,
+        Effect.runPromise
+      );
+    },
+  });
+
+  const loaderDataLayersSelectionForAreaMap = useQuery({
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    queryKey: ["data-layers-selection-for-areamap", area, layers],
+    enabled:
+      area &&
+      layers &&
+      !!loaderDataLayersForAreaMap.data &&
+      E.isRight(loaderDataLayersForAreaMap.data)
+        ? true
+        : false,
+    queryFn() {
+      const program = Effect.gen(function* (_) {
+        const _layers = yield* _(
+          O.fromNullable(layers),
+          O.filter(S.isNonEmpty),
+          O.map(S.trim),
+          O.map((_) => jsurl.parse(_) as number[]),
+          O.filter(A.isNonEmptyArray)
+        );
+
+        const _area = yield* _(
+          O.fromNullable(area),
+          O.filter(S.isNonEmpty),
+          O.map(S.trim),
+          O.map(jsurl.parse)
+        );
+
+        const dataLayers = yield* _(loaderDataLayersForAreaMap.data!);
 
         const selectedLayers = dataLayers.filter((layer) =>
           _layers.includes(layer.id)
@@ -594,13 +858,18 @@ export function Home() {
   });
 
   const [dataLayerSelectionResult, setDataLayerSelectionResult] = useState(
-    () => loaderDataLayersSelection.data || loader
+    () => loaderDataLayersSelection.data
   );
 
+  const [
+    dataLayerSelectionResultForCompetitors,
+    setDataLayerSelectionResultForCompetitors,
+  ] = useState(() => loaderDataLayersSelectionForCompetitors.data);
 
-  const [dataLayerSelectionResultForCompetitors, setDataLayerSelectionResultForCompetitors] = useState(
-    () => loaderDataLayersSelectionForCompetitors.data || loader
-  );
+  const [
+    dataLayerSelectionResultForAreaMap,
+    setDataLayerSelectionResultForAreaMap,
+  ] = useState(() => loaderDataLayersSelectionForAreaMap.data);
 
   const dataLayers = useMemo(() => {
     return pipe(
@@ -615,16 +884,21 @@ export function Home() {
     return pipe(
       O.fromNullable(loaderDataLayersForCompetitors.data),
       O.map(
-        E.mapRight((banks) => banks.sort((a, b) => a.priority - b.priority))
+        E.mapRight((banks) =>
+          banks.sort((a, b) => a.title.localeCompare(b.title))
+        )
       )
     );
   }, [loaderDataLayersForCompetitors.data]);
-   //@ts-expect-error
 
-  const mergeDataLayers = (dataLayer, dataLayerForCompetitor) => ({
-    ...dataLayer,
-    ...dataLayerForCompetitor
-  });
+  const dataLayersForAreaMap = useMemo(() => {
+    return pipe(
+      O.fromNullable(loaderDataLayersForAreaMap.data),
+      O.map(
+        E.mapRight((layers) => layers.sort((a, b) => a.priority - b.priority))
+      )
+    );
+  }, [loaderDataLayersForAreaMap.data]);
 
   const dataLayersByID = useMemo(() => {
     return pipe(
@@ -640,7 +914,6 @@ export function Home() {
     );
   }, [dataLayers]);
 
-
   const dataLayersByIDForCompetitors = useMemo(() => {
     return pipe(
       dataLayersForCompetitors,
@@ -655,7 +928,22 @@ export function Home() {
     );
   }, [dataLayersForCompetitors]);
 
-  const mergedDataLayersByID = useMemo(() => {
+  const dataLayersByIDForAreaMap = useMemo(() => {
+    return pipe(
+      dataLayersForAreaMap,
+      O.map(
+        E.mapRight(
+          flow(
+            A?.map((_) => [_.id, _] as const),
+            (_) => Object.fromEntries(_)
+          )
+        )
+      )
+    );
+  }, [dataLayersForAreaMap]);
+
+  // Joining the data layers ID's
+  const _mergedDataLayersByID = useMemo(() => {
     return pipe(
       dataLayersByID,
       O.flatMap(flow(E.getOrNull, O.fromNullable)),
@@ -671,6 +959,21 @@ export function Home() {
     );
   }, [dataLayersByID, dataLayersByIDForCompetitors]);
 
+  const mergedDataLayersByID = useMemo(() => {
+    return pipe(
+      _mergedDataLayersByID,
+      O.flatMap(flow(E.getOrNull, O.fromNullable)),
+      O.map((_l) =>
+        pipe(
+          dataLayersByIDForAreaMap,
+          O.flatMap(flow(E.getOrNull, O.fromNullable)),
+          O.map((_c) => mergeDataLayers(_l, _c))
+        )
+      ),
+      O.flatten,
+      O.map((merged) => E.right(merged))
+    );
+  }, [_mergedDataLayersByID, dataLayersByIDForAreaMap]);
 
   // Where on the map a user clicks with a data layer selected
   const [dataLayerTarget, setDataLayerTarget] = useState<{
@@ -678,14 +981,22 @@ export function Home() {
     layer: DataLayer;
   } | null>(null);
 
-  const auth = useMemo(() => {
-    return pipe(
-      getAuthentication(),
-      Effect.provideLayer(SessionStorageLive),
-      Effect.either,
-      Effect.runSync
+  const auth = getAuth();
+  
+  // @ts-expect-error
+  const columnName = auth?.right?.organisation?.columnName;
+  console.log(columnName);
+
+  const organisationLogo = useMemo(() => {
+    // @ts-expect-error
+
+    const svg = bankIcons[columnName];
+    return (
+      <div className="flex justify-center">
+        {svg ? <div dangerouslySetInnerHTML={{ __html: svg }}></div> : null}
+      </div>
     );
-  }, []);
+  }, [columnName]);
 
   const markerEventHandlers = useMemo(
     () => ({
@@ -726,7 +1037,7 @@ export function Home() {
             const latlng = new L.LatLng(lat, lng);
 
             setLatLng(latlng);
-            map?.flyTo(latlng, 18);
+            map?.flyTo(latlng, 16);
 
             setSearch((search) => {
               search.set("p", `${lat},${lng}`);
@@ -744,17 +1055,17 @@ export function Home() {
       const lat = loc.lat();
       const lng = loc.lng();
 
-      const latlng = new L.LatLng(lat, lng);
-
-      setLatLng(latlng);
-
-      map?.flyTo(latlng, 18);
-
       setSearch((search) => {
+        search.set("searchType", SearchType.nearest);
         search.set("p", `${lat},${lng}`);
         search.delete("d");
         return search;
       });
+
+      const latlng = new L.LatLng(lat, lng);
+      setLatLng(latlng);
+
+      map?.flyTo(latlng, 16);
     },
     [map, setSearch]
   );
@@ -766,16 +1077,18 @@ export function Home() {
         return Effect.sync(() => {
           const { latitude, longitude } = coords;
 
-          const latlng = new L.LatLng(latitude, longitude);
-
-          setLatLng(latlng);
-
-          map?.flyTo(latlng, 18);
-
           setSearch((search) => {
+            search.set("searchType", SearchType.nearest);
             search.set("p", `${latitude},${longitude}`);
+            search.delete("d");
+
             return search;
           });
+
+          const latlng = new L.LatLng(latitude, longitude);
+          setLatLng(latlng);
+
+          map?.flyTo(latlng, 16);
         });
       }),
       Effect.tapError((err) => {
@@ -797,8 +1110,6 @@ export function Home() {
     );
   }, [map, toast, setSearch]);
 
-
-
   const dataLayerPointQuery = useQuery({
     refetchInterval: false,
     refetchOnWindowFocus: false,
@@ -819,7 +1130,7 @@ export function Home() {
       } else if (zoom > 14) {
         radius = 50;
       } else {
-        radius = 200;
+        radius = 100;
       }
 
       return pipe(
@@ -896,8 +1207,7 @@ export function Home() {
       const selectedLayers = pipe(
         O.fromNullable(selectedDataLayersRef.current),
         O.getOrElse(() => [] as number[])
-      )
-
+      );
 
       pipe(
         mergedDataLayersByID,
@@ -981,7 +1291,7 @@ export function Home() {
                               id.toString()
                             );
 
-                            map?.flyTo([lat, lng], 18);
+                            map?.flyTo([lat, lng], 16);
                           }
                         },
                       }}
@@ -1086,6 +1396,10 @@ export function Home() {
 
   const compertitorsMarkers = useMemo(() => {
     if (!showCompetitors) return null;
+    // setSearch((search) => {
+    //   search.delete("clear");
+    //   return search;
+    // });
     return pipe(
       filteredCompetitors,
       O.match({
@@ -1131,7 +1445,7 @@ export function Home() {
                               id.toString()
                             );
 
-                            map?.flyTo([lat, lng], 18);
+                            map?.flyTo([lat, lng], 16);
                           }
                         },
                       }}
@@ -1219,7 +1533,10 @@ export function Home() {
 
                       <Tooltip>
                         {dataVariant === Variant.branch ? (
-                          <p>{props.branch_name}</p>
+                          <>
+                            <p>{props.bank_name}</p>
+                            <p>{props.branch_name}</p>
+                          </>
                         ) : null}
                         <p>{props.address}</p>
                       </Tooltip>
@@ -1233,9 +1550,7 @@ export function Home() {
       })
     );
   }, [filteredCompetitors, setSearch, dataVariant, showCompetitors]);
-  
-   //@ts-expect-error
-
+  // @ts-expect-error
   const handleCheckboxChange = (layerId) => (e) => {
     const set = new Set(selectedDataLayers);
 
@@ -1309,20 +1624,23 @@ export function Home() {
 
                   <div>
                     <h2>Competitions</h2>
-                    {
-                      pipe(
-                        dataLayersForCompetitors,
-                        O.match({
-                          onNone: constNull,
-                          onSome: E.match({
-                            onLeft: constNull,
-                            onRight(dataLayersForCompetitors) {
-                              return dataLayersForCompetitors.map((layer) => {
-                                const selected = selectedDataLayers.includes(layer.id)
+                    {pipe(
+                      dataLayersForCompetitors,
+                      O.match({
+                        onNone: constNull,
+                        onSome: E.match({
+                          onLeft: constNull,
+                          onRight(dataLayersForCompetitors) {
+                            return dataLayersForCompetitors.map((layer) => {
+                              const selected = selectedDataLayers.includes(
+                                layer.id
+                              );
 
-                                return (
-
-                                  <div key={layer.id} className="whitespace-nowrap">
+                              return (
+                                <div
+                                  key={layer.id}
+                                  className="whitespace-nowrap"
+                                >
                                   <Checkbox
                                     key={layer.id}
                                     value={layer.id}
@@ -1331,12 +1649,15 @@ export function Home() {
                                   >
                                     {layer.title}
                                   </Checkbox>
-  
+
                                   {selected ? (
                                     <ul className="p-2">
                                       {layer.legend.map((legend) => {
                                         return (
-                                          <li key={legend.value} className="space-x-2">
+                                          <li
+                                            key={legend.value}
+                                            className="space-x-2"
+                                          >
                                             <span
                                               className="w-4 h-4 inline-block align-middle"
                                               style={{
@@ -1350,15 +1671,12 @@ export function Home() {
                                     </ul>
                                   ) : null}
                                 </div>
-
-                                )
-                              })
-                            }
-                          })
-
-                        })
-                      )
-                    }
+                              );
+                            });
+                          },
+                        }),
+                      })
+                    )}
                   </div>
                 </div>
               </DataLayerControl>
@@ -1369,126 +1687,59 @@ export function Home() {
     );
   }, [dataLayers, dataLayersForCompetitors, selectedDataLayers, setSearch]);
 
-  // const mapDataLayersForCompetitors = useMemo(() => {
-  //   return pipe(
-  //     dataLayersForCompetitors,
-  //     O.match({
-  //       onNone: constNull,
-  //       onSome: E.match({
-  //         onLeft: constNull,
-  //         onRight(dataLayers) {
-  //           return (
-  //             <DataLayerControl position="topright">
-  //               <h2 className="font-bold">Competitions</h2>
+  const mapLayerForAreaMap = useMemo(() => {
+    return pipe(
+      dataLayersForAreaMap,
+      O.match({
+        onNone: constNull,
+        onSome: E.match({
+          onLeft: constNull,
+          onRight(dataLayersForAreaMap) {
+            return (
+              <DataLayerControlForAreaName position="topright">
+                <h2 className="font-bold">Area Map of Nigeria</h2>
 
-  //               {dataLayers.map((layer) => {
-  //                 const selected = selectedDataLayers.includes(layer.id);
+                {dataLayersForAreaMap.map((layer) => {
+                  const selected = selectedDataLayers.includes(layer.id);
 
-  //                 return (
-  //                   <div key={layer.id} className="whitespace-nowrap">
-  //                     <Checkbox
-  //                       key={layer.id}
-  //                       value={layer.id}
-  //                       isChecked={selected}
-  //                       onChange={handleCheckboxChange(layer.id)}
-  //                     >
-  //                       {layer.title}
-  //                     </Checkbox>
+                  return (
+                    <div key={layer.id} className="whitespace-nowrap">
+                      <Checkbox
+                        key={layer.id}
+                        value={layer.id}
+                        isChecked={selected}
+                        onChange={handleCheckboxChange(layer.id)}
+                      >
+                        {layer.title}
+                      </Checkbox>
 
-  //                     {selected ? (
-  //                       <ul className="p-2">
-  //                         {layer.legend.map((legend) => {
-  //                           return (
-  //                             <li key={legend.value} className="space-x-2">
-  //                               <span
-  //                                 className="w-4 h-4 inline-block align-middle"
-  //                                 style={{
-  //                                   backgroundColor: legend.color,
-  //                                 }}
-  //                               />
-  //                               <span>{legend.value}</span>
-  //                             </li>
-  //                           );
-  //                         })}
-  //                       </ul>
-  //                     ) : null}
-  //                   </div>
-  //                 );
-  //               })}
-  //             </DataLayerControl>
-  //           );
-  //         },
-  //       }),
-  //     })
-  //   );
-  // }, [dataLayersForCompetitors, selectedDataLayers, setSearch]);
-
-  // const mapDataLayersForCompetitors = useMemo(() => {
-  //   return pipe(
-  //     dataLayersForCompetitors,
-  //     O.match({
-  //       onNone: constNull,
-  //       onSome: E.match({
-  //         onLeft: constNull,
-  //         onRight(dataLayersForCompetitors) {
-  //           return (
-  //             <DataLayerControl position="topright">
-  //               {dataLayersForCompetitors?.map((banks) => {
-
-  //                 return (
-  //                   <div  className="whitespace-nowrap">
-  //                     <details className="whitespace-nowrap" >
-  //                       <summary key={banks.id}>
-  //                       {banks.bank}
-  //                       <p>{banks.data.map((lay) => {
-
-  //                         const selected = selectedDataLayers.includes(lay.id);
-
-  //                         return (
-  //                           <div key={lay.id} className="whitespace-nowrap">
-  //                           <Checkbox
-  //                              key={lay.id}
-  //                              value={lay.id}
-  //                              isChecked={selected}
-  //                              onChange={(e) => {
-  //                                const set = new Set(selectedDataLayers);
-
-  //                                if (e.target.checked) {
-  //                                  set.add(lay.id);
-  //                                } else {
-  //                                  set.delete(lay.id);
-  //                                }
-
-  //                                setSearch((search) => {
-  //                                  if (set.size > 0) {
-  //                                    search.set("layers", jsurl.stringify([...set]));
-  //                                  } else {
-  //                                    search.delete("layers");
-  //                                  }
-  //                                  return search;
-  //                                });
-
-  //                                setSelectedDataLayers([...set]);
-  //                              }}
-
-  //                           >{lay.title}
-  //                           </Checkbox>
-  //                           </div>
-  //                         )
-  //                       })}</p>
-  //                       </summary>
-  //                     </details>
-
-  //                   </div>
-  //                 );
-  //               })}
-  //             </DataLayerControl>
-  //           );
-  //         },
-  //       }),
-  //     })
-  //   );
-  // }, [dataLayersForCompetitors  , selectedDataLayers, setSearch]);
+                      {selected ? (
+                        <ul className="p-2">
+                          {layer.legend.map((legend) => {
+                            return (
+                              <li key={legend.value} className="space-x-2">
+                                <span
+                                  className="w-4 h-4 inline-block align-middle"
+                                  style={{
+                                    backgroundColor: legend.color,
+                                  }}
+                                />
+                                <span>{legend.value}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </DataLayerControlForAreaName>
+            );
+          },
+        }),
+      })
+    );
+  }, [dataLayersForAreaMap, selectedDataLayers, setSearch]);
 
   const drawnLayerBounds =
     drawnLayer instanceof L.Circle
@@ -1508,21 +1759,17 @@ export function Home() {
         onNone: constNull,
         onSome(_) {
           return pipe(
-             //@ts-expect-error
             E.all(_),
             E.match({
               onLeft: constNull,
-               //@ts-expect-error
               onRight: ({ layers, result: data }) => {
                 return pipe(
                   O.fromNullable(drawnLayerCenter),
                   O.orElse(() =>
                     pipe(
                       A.head([...Object.values(data)]),
-                       //@ts-expect-error
-                      O.filter((_) => _.features.length > 0),
+                      O.filter((_) => _?.features.length > 0),
                       O.map((head) => {
-                         //@ts-expect-error
                         const geojson = L.geoJson(head);
                         return geojson.getBounds().getCenter();
                       })
@@ -1531,6 +1778,8 @@ export function Home() {
                   O.match({
                     onNone: constNull,
                     onSome(center) {
+                      setDataLayerSelectionResultForAreaMap(undefined),
+                        setDataLayerSelectionResultForCompetitors(undefined);
                       return (
                         <>
                           {Object.keys(data).map((key) => {
@@ -1553,7 +1802,6 @@ export function Home() {
                                   const { features } = data[key];
 
                                   const layer = layers.find(
-                                     //@ts-expect-error
                                     (layer) => layer.id == key
                                   );
 
@@ -1562,7 +1810,6 @@ export function Home() {
                                   );
 
                                   return (
-                                     //@ts-expect-error
                                     <li key={key} className="space-y-2">
                                       <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
                                         <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
@@ -1614,24 +1861,37 @@ export function Home() {
                                   );
                                 })}
                               </ul>
+                              <div className="flex w-full justify-between">
+                                <Button
+                                  size="sm"
+                                  className=""
+                                  onClick={() => {
+                                    // // @ts-expect-error
+                                    // updateURLSearchWithoutNavigation("dl", null);
 
-                              <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() => {
-                                  // // @ts-expect-error
-                                  // updateURLSearchWithoutNavigation("dl", null);
-                                   //@ts-expect-error
-                                  setDataLayerSelectionResult(undefined);
+                                    setDataLayerSelectionResultForAreaMap(
+                                      undefined
+                                    );
 
-                                  setSearch((search) => {
-                                    search.delete("area");
-                                    return search;
-                                  });
-                                }}
-                              >
-                                Close
-                              </Button>
+                                    setSearch((search) => {
+                                      search.delete("area");
+                                      return search;
+                                    });
+                                  }}
+                                >
+                                  Close
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  leftIcon={<FaDownload />}
+                                  onClick={() => {
+                                    // @ts-expect-error
+                                    downloadCSV(data);
+                                  }}
+                                >
+                                  Download
+                                </Button>
+                              </div>
                             </div>
                           </Popup>
                         </>
@@ -1658,26 +1918,24 @@ export function Home() {
     return pipe(
       O.Do,
       O.bind("layers", () => dataLayersForCompetitors),
-      O.bind("result", () => O.fromNullable(dataLayerSelectionResultForCompetitors)),
+      O.bind("result", () =>
+        O.fromNullable(dataLayerSelectionResultForCompetitors)
+      ),
       O.match({
         onNone: constNull,
         onSome(_) {
           return pipe(
-             //@ts-expect-error
             E.all(_),
             E.match({
               onLeft: constNull,
-               //@ts-expect-error
               onRight: ({ layers, result: data }) => {
                 return pipe(
                   O.fromNullable(drawnLayerCenter),
                   O.orElse(() =>
                     pipe(
                       A.head([...Object.values(data)]),
-                       //@ts-expect-error
                       O.filter((_) => _.features.length > 0),
                       O.map((head) => {
-                         //@ts-expect-error
                         const geojson = L.geoJson(head);
                         return geojson.getBounds().getCenter();
                       })
@@ -1686,6 +1944,8 @@ export function Home() {
                   O.match({
                     onNone: constNull,
                     onSome(center) {
+                      setDataLayerSelectionResult(undefined),
+                        setDataLayerSelectionResultForAreaMap(undefined);
                       return (
                         <>
                           {Object.keys(data).map((key) => {
@@ -1702,13 +1962,16 @@ export function Home() {
                             closeOnClick={false}
                           >
                             <div className="space-y-3 data-layer-popup">
+                              <h1 className="font-bold">
+                                Competitor's Selection Data
+                              </h1>
+
                               <ul className="py-2 space-y-2 divide-y">
                                 {Object.keys(data).map((k) => {
                                   const key = k as unknown as keyof typeof data;
                                   const { features } = data[key];
 
                                   const layer = layers.find(
-                                     //@ts-expect-error
                                     (layer) => layer.id == key
                                   );
 
@@ -1717,7 +1980,6 @@ export function Home() {
                                   );
 
                                   return (
-                                     //@ts-expect-error
                                     <li key={key} className="space-y-2">
                                       <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
                                         <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
@@ -1770,24 +2032,37 @@ export function Home() {
                                 })}
                               </ul>
 
-                              <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() => {
-                                  // // @ts-expect-error
-                                  // updateURLSearchWithoutNavigation("dl", null);
-                                   //@ts-expect-error
+                              <div className="flex w-full justify-between">
+                                <Button
+                                  size="sm"
+                                  className=""
+                                  onClick={() => {
+                                    // // @ts-expect-error
+                                    // updateURLSearchWithoutNavigation("dl", null);
 
-                                  setDataLayerSelectionResultForCompetitors(undefined);
+                                    setDataLayerSelectionResultForAreaMap(
+                                      undefined
+                                    );
 
-                                  setSearch((search) => {
-                                    search.delete("area");
-                                    return search;
-                                  });
-                                }}
-                              >
-                                Close
-                              </Button>
+                                    setSearch((search) => {
+                                      search.delete("area");
+                                      return search;
+                                    });
+                                  }}
+                                >
+                                  Close
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  leftIcon={<FaDownload />}
+                                  onClick={() => {
+                                    // @ts-expect-error
+                                    downloadCSV(data);
+                                  }}
+                                >
+                                  Download
+                                </Button>
+                              </div>
                             </div>
                           </Popup>
                         </>
@@ -1803,6 +2078,175 @@ export function Home() {
     );
   }, [
     dataLayerSelectionResultForCompetitors,
+    drawnLayer,
+    toast,
+    navigate,
+    selectedDataLayers.length,
+    setSearch,
+  ]);
+
+  const dataLayersSelectionForAreaMap = useMemo(() => {
+    return pipe(
+      O.Do,
+      O.bind("layers", () => dataLayersForAreaMap),
+      O.bind("result", () =>
+        O.fromNullable(dataLayerSelectionResultForAreaMap)
+      ),
+      O.match({
+        onNone: constNull,
+        onSome(_) {
+          return pipe(
+            E.all(_),
+            E.match({
+              onLeft: constNull,
+              onRight: ({ layers, result: data }) => {
+                return pipe(
+                  O.fromNullable(drawnLayerCenter),
+                  O.orElse(() =>
+                    pipe(
+                      A.head([...Object.values(data)]),
+                      O.filter((_) => _.features.length > 0),
+                      O.map((head) => {
+                        const geojson = L.geoJson(head);
+                        return geojson.getBounds().getCenter();
+                      })
+                    )
+                  ),
+                  O.match({
+                    onNone: constNull,
+                    onSome(center) {
+                      setDataLayerSelectionResult(undefined),
+                        setDataLayerSelectionResultForCompetitors(undefined);
+                      return (
+                        <>
+                          {Object.keys(data).map((key) => {
+                            const geojson =
+                              data[key as any as keyof typeof data];
+                            return <GeoJSON key={key} data={geojson} />;
+                          })}
+
+                          <Popup
+                            keepInView
+                            position={center}
+                            autoClose={false}
+                            closeButton={false}
+                            closeOnClick={false}
+                          >
+                            <div className="space-y-3 data-layer-popup">
+                              <h1 className="font-bold">
+                                Area Name Selection Data
+                              </h1>
+                              <ul className="py-2 space-y-2 divide-y">
+                                {Object.keys(data).map((k) => {
+                                  const key = k as unknown as keyof typeof data;
+                                  const { features } = data[key];
+
+                                  const layer = layers.find(
+                                    (layer) => layer.id == key
+                                  );
+
+                                  const group = groupLayerAttributesByCategory(
+                                    layer!
+                                  );
+                                  return (
+                                    <li key={key} className="space-y-2">
+                                      <div className="py-2 px-4 bg-[var(--brand)] rounded-md text-white">
+                                        <h2 className="font-bold text-white text-base whitespace-nowrap truncate">
+                                          {layer?.title} (Summary)
+                                        </h2>
+                                      </div>
+
+                                      {Object.keys(group).map((k) => {
+                                        const key =
+                                          k as any as keyof typeof group;
+                                        const attrs = group[key];
+
+                                        return (
+                                          <details
+                                            key={key}
+                                            className="bg-white rounded-md py-2 px-4"
+                                          >
+                                            <summary>
+                                              <h4 className="capitalize font-medium text-lg inline align-middle px-2">
+                                                {key.toLowerCase()}
+                                              </h4>
+                                            </summary>
+
+                                            <ul className="divide-y">
+                                              {attrs.map((attr) => {
+                                                return (
+                                                  <li
+                                                    key={attr.value}
+                                                    className="py-2 space-y-0"
+                                                  >
+                                                    <h4 className="capitalize text-base text-gray-600 font-medium">
+                                                      {attr.value
+                                                        .replace(/_/g, " ")
+                                                        .toLowerCase()}
+                                                    </h4>
+
+                                                    <AttributeSummary
+                                                      attribute={attr}
+                                                      features={features}
+                                                    />
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          </details>
+                                        );
+                                      })}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+
+                              <div className="flex w-full justify-between">
+                                <Button
+                                  size="sm"
+                                  className=""
+                                  onClick={() => {
+                                    // // @ts-expect-error
+                                    // updateURLSearchWithoutNavigation("dl", null);
+
+                                    setDataLayerSelectionResultForAreaMap(
+                                      undefined
+                                    );
+
+                                    setSearch((search) => {
+                                      search.delete("area");
+                                      return search;
+                                    });
+                                  }}
+                                >
+                                  Close
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  leftIcon={<FaDownload />}
+                                  onClick={() => {
+                                    // @ts-expect-error
+                                    downloadCSV(data);
+                                  }}
+                                >
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
+                          </Popup>
+                        </>
+                      );
+                    },
+                  })
+                );
+              },
+            })
+          );
+        },
+      })
+    );
+  }, [
+    dataLayerSelectionResultForAreaMap,
     drawnLayer,
     toast,
     navigate,
@@ -1918,14 +2362,20 @@ export function Home() {
   }, [selectedDataLayers]);
 
   useEffect(() => {
-     //@ts-expect-error
-    setDataLayerSelectionResult(loaderDataLayersSelection.data);
-     //@ts-expect-error
-    setDataLayerSelectionResultForCompetitors(loaderDataLayersSelectionForCompetitors.data);
+    setDataLayerSelectionResult(loaderDataLayersSelection?.data);
+  }, [loaderDataLayersSelection.data]);
 
-  }, [loaderDataLayersSelection.data, loaderDataLayersSelectionForCompetitors.data]);
+  useEffect(() => {
+    setDataLayerSelectionResultForCompetitors(
+      loaderDataLayersSelectionForCompetitors?.data
+    );
+  }, [loaderDataLayersSelectionForCompetitors.data]);
 
-
+  useEffect(() => {
+    setDataLayerSelectionResultForAreaMap(
+      loaderDataLayersSelectionForAreaMap?.data
+    );
+  }, [loaderDataLayersSelectionForAreaMap.data]);
 
   useEffect(() => {
     mapRef.current = map;
@@ -1994,6 +2444,18 @@ export function Home() {
   }, [showSideBar]);
 
   useEffect(() => {
+    if (columnName) {
+      updateBrandColor(columnName);
+    }
+  }, [columnName]);
+
+  useEffect(() => {
+    if (showCompetitors) {
+      competitorQuery.refetch()
+    }
+  }, [showCompetitors, competitorQuery]);
+
+  useEffect(() => {
     /** We don't want to execute this every time something minor causes a navigtion event
      * i.e setting the zoom */
     const search = new URLSearchParams(window.location.search);
@@ -2030,7 +2492,6 @@ export function Home() {
           return;
         }
       }
-       //@ts-expect-error
 
       if (dataLayerSelectionResult && E.isRight(dataLayerSelectionResult)) {
         const result = dataLayerSelectionResult.right;
@@ -2042,8 +2503,11 @@ export function Home() {
           return;
         }
       }
-        //@ts-expect-error
-      if (dataLayerSelectionResultForCompetitors && E.isRight(dataLayerSelectionResultForCompetitors)) {
+
+      if (
+        dataLayerSelectionResultForCompetitors &&
+        E.isRight(dataLayerSelectionResultForCompetitors)
+      ) {
         const result = dataLayerSelectionResultForCompetitors.right;
 
         const data = [...Object.values(result)][0];
@@ -2054,7 +2518,19 @@ export function Home() {
         }
       }
 
+      if (
+        dataLayerSelectionResultForAreaMap &&
+        E.isRight(dataLayerSelectionResultForAreaMap)
+      ) {
+        const result = dataLayerSelectionResultForAreaMap.right;
 
+        const data = [...Object.values(result)][0];
+
+        if (data && data.features.length > 0) {
+          map?.flyToBounds(L.geoJson(data).getBounds());
+          return;
+        }
+      }
 
       if (tab === Tab.branches) {
         if (O.isSome(selectedBranch)) {
@@ -2077,7 +2553,10 @@ export function Home() {
 
           group.addLayer(feature);
 
+          // @ts-expect-error
+
           if (loaderData.latlng) {
+            // @ts-expect-error
             const { lat, lng } = loaderData.latlng;
             group.addLayer(L.marker([lat, lng]));
           }
@@ -2086,8 +2565,9 @@ export function Home() {
           return;
         }
       }
-
+      // @ts-expect-error
       if (loaderData.latlng) {
+        // @ts-expect-error
         const { lat, lng } = loaderData.latlng;
         map?.flyTo([lat, lng], zoom);
       }
@@ -2095,11 +2575,13 @@ export function Home() {
   }, [
     map,
     tab,
+    // @ts-expect-error
     loaderData.latlng,
     filteredBranches,
     selectedBranch,
     dataLayerSelectionResult,
     dataLayerSelectionResultForCompetitors,
+    dataLayerSelectionResultForAreaMap,
     directionQuery.data,
     navigation.state,
   ]);
@@ -2116,14 +2598,14 @@ export function Home() {
     })
   );
 
-  const branchURLSearch = `tab=${Tab.branches}&searchType=${tabSearchType}&p=${lat},${lng}`;
-  const nearestURLSearch = `tab=${Tab.branches}&searchType=${SearchType.nearest}&p=${lat},${lng}`;
+  const branchURLSearch = `tab=${Tab.branches}&searchType=${tabSearchType}`;
+  const nearestURLSearch = `tab=${Tab.branches}&searchType=${SearchType.nearest}`;
 
   const steps = [
     {
       selector: ".search-field-intro",
       content:
-        "Search for a location in order to get baranches or to view POS agents around you.",
+        "Search for a location in order to get branches, view POS agents and ATM stands around you.",
     },
     {
       selector: ".search-field-auto-intro",
@@ -2135,13 +2617,25 @@ export function Home() {
       ? {
           selector: ".leaflet-draw",
           content:
-            "Drawing tools to query feature on the map based on the data layers",
+            "Drawing tools to query features on the map based on the data layers",
         }
       : null,
 
-    showInternalTools
-      ? { selector: ".data-layers-intro", content: "Data layers" }
+      showInternalTools
+      ? { selector: ".data-layers-intro", content: "Branches" }
       : null,
+
+
+    showInternalTools
+      ? { selector: ".data-layers-intro_", content: "Socio-economic data" }
+      : null,
+
+
+    {
+      selector: ".zoom-default",
+      content: "Default zoom to set map zoom level to default",
+    },
+
     {
       selector: ".leaflet-control-zoom",
       content: "Zoom controls to adjust the map zoom level",
@@ -2159,9 +2653,14 @@ export function Home() {
     { id: 3, name: "ATM (nearest)", icon: IoStorefront, variant: Variant.atm },
   ];
 
-   //@ts-expect-error
+  // @ts-expect-error
   const toggle = (id) => {
     setIsSelected(isSelected === id ? null : id);
+  };
+
+  const toggleCompetitors = () => {
+    setShowCompetitors((prev) => !prev);
+ 
   };
 
   return (
@@ -2179,6 +2678,9 @@ export function Home() {
             maxBounds={maxMapViewBounds}
             className={clsx("h-full flex-1", styles.map)}
           >
+            <DefaultZommControl
+              position={isLargeScreen ? "bottomright" : "topleft"}
+            />
             <ZoomControl position={isLargeScreen ? "bottomright" : "topleft"} />
 
             {loaderDataLayers.data
@@ -2237,10 +2739,39 @@ export function Home() {
                 )
               : null}
 
+            {loaderDataLayersForAreaMap.data
+              ? pipe(
+                  loaderDataLayersForAreaMap.data,
+                  E.match({
+                    onLeft: constNull,
+                    onRight(layers) {
+                      return layers
+                        .filter((layer) =>
+                          selectedDataLayers.includes(layer.id)
+                        )
+                        .map((layer) => {
+                          return (
+                            <WMSTileLayer
+                              transparent
+                              layers="nmc"
+                              opacity={0.7}
+                              key={layer.id}
+                              format="image/png"
+                              id={layer.id.toString()}
+                              url={`${layerURL}?layer=${layer.mapName}`}
+                            ></WMSTileLayer>
+                          );
+                        });
+                    },
+                  })
+                )
+              : null}
+
             {streetview}
 
             {dataLayersSelection}
             {dataLayersSelectionForCompetitors}
+            {dataLayersSelectionForAreaMap}
 
             {dataLayerPoint}
 
@@ -2344,7 +2875,33 @@ export function Home() {
                     <Button
                       size="xs"
                       className="w-fit"
-                      onClick={() => loaderDataLayersSelectionForCompetitors.refetch()}
+                      onClick={() =>
+                        loaderDataLayersSelectionForCompetitors.refetch()
+                      }
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <Loader />
+                )}
+              </Popup>
+            ) : null}
+
+            {drawnLayerCenter &&
+            (loaderDataLayersSelectionForAreaMap.isFetching ||
+              loaderDataLayersSelectionForAreaMap.isError) ? (
+              <Popup keepInView position={drawnLayerCenter}>
+                {loaderDataLayersSelectionForAreaMap.isError ? (
+                  <div className="flex flex-col items-center justify-center py-2 space-y-2">
+                    <span className="text-center">An error occurred.</span>
+
+                    <Button
+                      size="xs"
+                      className="w-fit"
+                      onClick={() =>
+                        loaderDataLayersSelectionForAreaMap.refetch()
+                      }
                     >
                       Retry
                     </Button>
@@ -2388,8 +2945,8 @@ export function Home() {
             {showInternalTools && baseMapRegistered ? (
               <>
                 {mapDataLayers}
-                {/* {mapDataLayersForCompetitors} */}
 
+                {mapLayerForAreaMap}
                 <FeatureGroup>
                   <EditControl
                     position="topright"
@@ -2443,11 +3000,13 @@ export function Home() {
 
       <div
         className={clsx(
-          "py-4 space-y-4 left-0 right-0 h-[45%] lg:top-0 lg:w-[22%] lg:h-[unset] overflow-y-auto",
+          "py-4 space-y-4  left-0 right-0 h-[45%] lg:top-0 lg:w-[22%] lg:h-[unset] overflow-y-auto",
           styles.side_bar,
           { [styles.side_bar__hidden]: !showSideBar }
         )}
       >
+        {organisationLogo}
+
         <div className="px-4">
           <Search
             onSubmit={onSearch}
@@ -2523,6 +3082,8 @@ export function Home() {
             overflow-y-auto"
             >
               {lists.map((list) => {
+                const point = `${markerLatlng?.lat},${markerLatlng?.lng}`;
+
                 return (
                   <Box key={list.id} mb={2} className="space-y-2">
                     <Button
@@ -2541,10 +3102,10 @@ export function Home() {
                       }
                       to={
                         list.name === "Branches"
-                          ? `/?${branchURLSearch}&variant=${Variant.branch}`
+                          ? `/?${branchURLSearch}&p=${point}&variant=${Variant.branch}`
                           : list.name === "POS Agents (nearest)"
-                          ? `/?${nearestURLSearch}&variant=${Variant.pos}`
-                          : `/?${nearestURLSearch}&variant=${Variant.atm}`
+                          ? `/?${nearestURLSearch}&p=${point}&variant=${Variant.pos}`
+                          : `/?${nearestURLSearch}&p=${point}&variant=${Variant.atm}`
                       }
                     >
                       <div className="flex justify-between w-full items-center">
@@ -2554,41 +3115,71 @@ export function Home() {
                     </Button>
 
                     <Collapse in={isSelected === list.id} animateOpacity>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className=""
-                        onClick={toggleCompetitors}
-                      >
-                        Competition
-                      </Button>
-
                       {list.name === "Branches" ? (
-                        <div className="flex space-y-2 px-3 items-center justify-between">
-                          <h5 className="font-semibold">Search Type</h5>
+                        <div className="flex flex-col space-y-2 p-2 bg-gray-50  border-2 border-[color:gray] rounded-md">
+                          <div className="flex space-y-2  items-center justify-between ">
+                            <h5 className="font-semibold">My Branches </h5>
 
-                          <div className="flex items-center space-x-2">
-                            {showInternalTools ? (
-                              <select
-                                value={O.getOrElse(searchType, () => "")}
-                                onChange={(e) => {
-                                  setSearch((search) => {
-                                    search.set("searchType", e.target.value);
-                                    search.delete("clear");
-                                    return search;
-                                  });
-                                }}
-                              >
-                                <option>Select</option>
-                                <option value={SearchType.all}>All</option>
-                                <option value={SearchType.nearest}>
-                                  Nearest
-                                </option>
-                              </select>
-                            ) : null}
+                            <div className="flex items-center space-x-2">
+                              {showInternalTools ? (
+                                <select
+                                  value={O.getOrElse(searchType, () => "")}
+                                  onChange={(e) => {
+                                    setSearch((search) => {
+                                      search.set("searchType", e.target.value);
+                                      search.delete("clear");
+                                      return search;
+                                    });
+                                  }}
+                                >
+                                  <option value={SearchType.all}>All</option>
+                                  <option value={SearchType.nearest}>
+                                    Nearest
+                                  </option>
+                                </select>
+                              ) : (
+                                <Button
+                                  size="xs"
+                                  variant={
+                                    showCompetitors ? "solid" : "outline"
+                                  }
+                                  className=""
+                                  onClick={toggleCompetitors}
+                                >
+                                  Nearest Competition
+                                </Button>
+                              )}
+                            </div>
                           </div>
+
+                          <Divider className="" />
+                          <Button
+                            size="xs"
+                            variant={
+                              showCompetitors && point !== "undefined,undefined"
+                                ? "solid"
+                                : "outline"
+                            }
+                            className=""
+                            onClick={toggleCompetitors}
+                          >
+                            Nearest Competition
+                          </Button>
                         </div>
-                      ) : null}
+                      ) : (
+                        <Button
+                          size="xs"
+                          variant={
+                            showCompetitors && point !== "undefined,undefined"
+                              ? "solid"
+                              : "outline"
+                          }
+                          className=""
+                          onClick={toggleCompetitors}
+                        >
+                          Nearest Competition
+                        </Button>
+                      )}
                     </Collapse>
                   </Box>
                 );
@@ -2703,7 +3294,9 @@ export function Home() {
                               }}
                               className="h-full m-auto items-center space-y-2 flex justify-center"
                             >
-                              <p className="text-lg">Make a search first!</p>
+                              <p className="text-lg">
+                                Please search for a location!
+                              </p>
                             </motion.div>
                           ) : (
                             <LoadError />
@@ -2725,9 +3318,9 @@ export function Home() {
                                   key={id}
                                   id={id?.toString()}
                                   className={clsx(
-                                    "p-4 space-y-1 font-medium bg-blue-50 border-2 border-[color:var(--brand-light)] rounded-md cursor-pointer",
+                                    "p-4 space-y-1 font-medium bg-gray-50 border-2 border-[color:gray] rounded-md cursor-pointer",
                                     {
-                                      ["border-blue-900"]: pipe(
+                                      ["border-[color:var(--brand)]"]: pipe(
                                         branch,
                                         O.match({
                                           onNone: constFalse,
@@ -2763,9 +3356,14 @@ export function Home() {
                                     <p className="">
                                       Address: {formatAddress(props.address)}
                                     </p>
-                                    {loaderData.latlng ? (
+                                    
+                                    {
+                                      // @ts-expect-error
+                                    
+                                    loaderData.latlng ? (
                                       <DistanceBetween
                                         end={{ lat, lng }}
+                                        // @ts-expect-error
                                         start={loaderData.latlng}
                                       />
                                     ) : null}

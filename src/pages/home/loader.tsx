@@ -31,7 +31,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return {
       branches: null,
       competitors: null,
-      latlng: null
     };
   }
 
@@ -101,14 +100,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 
   const competitorProgram = Effect.gen(function* (_) {
-    if (searchType === SearchType.nearest) {
       return yield* _(Effect.flatMap(latlng, (latlng) =>
         BranchService.getNearestCompetitors(latlng, variant)
       ));
-    } else {
-      return yield* _(BranchService.getCompetitors(variant));
-    }
   }).pipe(Effect.provideLayer(layer), Effect.either);
+
+
+  // const competitorProgram = Effect.gen(function* (_) {
+  //     return yield* _(Effect.flatMap(latlng, (latlng) =>
+  //       BranchService.getNearestCompetitors(latlng, variant)
+  //     ));  
+  // }).pipe(Effect.provideLayer(layer), Effect.either);
 
 
 

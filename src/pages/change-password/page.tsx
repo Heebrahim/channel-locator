@@ -77,7 +77,7 @@ export function ChangePassword() {
 
   return (
     <div className="lg:flex h-screen">
-      <div className="flex-1 lg:h-full h-[50%] bg-[#FFF9E6] relative">
+      <div className="flex-1 lg:h-full h-[50%] bg-[#131924] relative">
         <div className="h-full flex items-center justify-center">
           <div
             className="lg:w-[35rem] lg:h-[35rem] w-[90%] h-[90%] bg-cover"
@@ -86,9 +86,9 @@ export function ChangePassword() {
         </div>
 
         <div className="absolute bottom-0 m-4 p-2 lg:p-0 lg:m-8">
-          <img src="/mtn-logo.svg" className="w-10" />
+          {/* <img src="/mtn-logo.svg" className="w-10" /> */}
           <p>
-            <i>Everywhere you go</i>
+            <i></i>
           </p>
         </div>
       </div>

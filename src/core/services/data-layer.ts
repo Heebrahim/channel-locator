@@ -11,6 +11,13 @@ export function getDataLayers() {
     Effect.flatMap(DataLayerRepository, (repo) => repo.getAll()),
     )
   }
+
+
+export function getAreaMapDataLayers() {
+  return  pipe(
+    Effect.flatMap(DataLayerRepository, (repo) => repo.getAreaMap()),
+    )
+  }
 export function getDataLayersForCompetitors() {
   return pipe(
     Effect.flatMap(DataLayerRepository, (repo) => repo.getAllCompetitors())

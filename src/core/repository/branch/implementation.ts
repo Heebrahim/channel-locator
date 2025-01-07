@@ -15,14 +15,12 @@ export const BranchRepositoryLive = Layer.effect(
     const service = yield* _(FeatureService);
 
     const auth = getAuth()
-     //@ts-expect-error
+    // @ts-expect-error
     const tableName = auth?.right?.organisation?.tableName
 
 
     const branches_mapName = `/CHANNELS/NamedMaps/${tableName}`;
-
     const POS_mapName = `/CHANNELS/NamedMaps/ZENITH_BANK`;
-
     const ATM_mapName = `/CHANNELS/NamedMaps/UNION_BANK`;
 
     const competition_mapName = `/CHANNELS/NamedMaps/BANKS_MERGED`;

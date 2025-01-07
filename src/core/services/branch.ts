@@ -1,6 +1,5 @@
 import { pipe } from "@effect/data/Function";
 import * as Effect from "@effect/io/Effect";
-import * as Either from "@effect/data/Either"
 
 
 
@@ -10,25 +9,17 @@ import { BranchRepository, Variant } from "../repository/branch/contract";
 import { getAuth } from "@/common/authUtil";
 
 
-
-
-const auth = getAuth()
-Either.isRight(auth) ? console.log(auth.right.role) : console.log("NO")
-
-
-
-
-
-
-function extractCompetitors(currentUserBank: string){
-  return (
-    data: FeatureCollection,
-  ): FeatureCollection => {
+function extractCompetitors(currentUserBank: string) {
+  return (data: FeatureCollection): FeatureCollection => {
+    const filteredFeatures = data.features.filter(
+      feature => feature.properties?.BANK_NAME !== currentUserBank
+    );
+    
     return {
       ...data,
-      features: data.features.filter(feature => feature.properties?.BANK_NAME !== currentUserBank)
-    }
-  }
+      features: filteredFeatures.slice(0, 5),
+    };
+  };
 }
 
 function extractData(variant: Variant) {
@@ -63,13 +54,14 @@ function extractData(variant: Variant) {
         variant === Variant.branch
           ? data.properties.BRANC_NAME
           : variant === Variant.pos
-          ? data.properties.Agent_name
+          ? data.properties.BRANC_NAME
           : data.properties.BRANC_NAME,
       bank_name:
+           
       variant === Variant.branch
         ? data.properties.BANK_NAME
         : variant === Variant.pos
-        ? data.properties.Agent_name
+        ? data.properties.BANK_NAME
         : data.properties.BANK_NAME,
   
 
@@ -95,20 +87,16 @@ export function getBranches(variant: Variant) {
   );
 }
 
-
-
-
 export function getCompetitors(variant: Variant) {
 
   const auth = getAuth()
-   //@ts-expect-error
-  const tableName  = auth?.right?.organisation?.tableName
-
+  // @ts-expect-error
+  const columnName = auth?.right?.organisation?.columnName
   return pipe(
     Effect.flatMap(BranchRepository, (repo) => repo.findAllCompetitors(variant)),
     Effect.map((data) => 
-       //@ts-expect-error
-      extractCompetitors(tableName)(data) 
+      // @ts-expect-error
+      extractCompetitors(columnName)(data) 
     ),
     // Effect.map((result) => result.features),
     Effect.map((_) => ({ ..._, features: _.features.map(extractData(variant)) })),
@@ -140,13 +128,17 @@ export function getNearestCompetitors(
   latlng: { lat: number; lng: number },
   variant: Variant,
 ) {
+
+  const auth = getAuth()
+  // @ts-expect-error
+  const columnName = auth?.right?.organisation?.columnName
   return pipe(
     Effect.flatMap(BranchRepository, (repo) =>
       repo.findNearestToCompetitors(latlng, variant),
     ),
     Effect.map((data) => 
-       //@ts-expect-error
-      extractCompetitors("FCMB")(data) 
+      // @ts-expect-error
+      extractCompetitors(columnName)(data) 
     ),
     Effect.map((_) => ({
       ..._,

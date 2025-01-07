@@ -133,7 +133,7 @@ export function Login() {
               <Button
                 type="submit"
                 className="block w-9/12 mx-auto"
-                isLoading={navigation.state === "submitting"}
+                isLoading={navigation.state === "submitting" || navigation.state === "loading"}
               >
                 Sign In
               </Button>

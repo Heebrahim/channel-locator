@@ -11,11 +11,11 @@ import {
 import { PropsWithChildren, useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 
-import { IoBarChart } from "react-icons/io5";
+import { IoMap } from "react-icons/io5";
 
 export interface Props extends L.ControlOptions, PropsWithChildren {}
 
-export function DataLayerControl({ children, ...props }: Props) {
+export function DataLayerControlForAreaName({ children, ...props }: Props) {
   const map = useMap();
 
   const [elRef, setRef] = useState<HTMLElement | null>(null);
@@ -40,8 +40,8 @@ export function DataLayerControl({ children, ...props }: Props) {
   return (
     <div
       ref={setRef}
-      title="Branches"
-      className="data-layers data-layers-intro leaflet-bar leaflet-control relative"
+      title="Socio-economic data"
+      className="data-layers leaflet-bar leaflet-control relative data-layers-intro_"
     >
       <Popover placement="left-start" closeOnBlur={false}>
         <PopoverTrigger>
@@ -49,12 +49,12 @@ export function DataLayerControl({ children, ...props }: Props) {
             role="button"
             className="!flex leaflet-bar-part leaflet-bar-part-single"
           >
-            <IoBarChart size={15} className="m-auto" />
+            <IoMap size={15} className="m-auto" />
           </a>
         </PopoverTrigger>
 
         <PopoverContent className={style.popup}>
-          <PopoverBody height={600}  className="overflow-y-auto">{children}</PopoverBody>
+          <PopoverBody>{children}</PopoverBody>
         </PopoverContent>
       </Popover>
     </div>

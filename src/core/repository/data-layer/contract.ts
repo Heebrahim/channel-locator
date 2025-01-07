@@ -16,6 +16,12 @@ export interface DataLayerRepository {
     DataLayer[]
   >;
 
+  getAreaMap(): Effect.Effect<
+    never,
+    Err | JsonParseError | StatusError,
+    DataLayer[]
+  >;
+
 
   getAllCompetitors (): Effect.Effect<
     never,

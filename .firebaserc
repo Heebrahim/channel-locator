@@ -1,5 +1,5 @@
 {
   "projects": {
-    "default": "channel-locator"
+    "default": "mtn-coverage-locator-vite"
   }
 }

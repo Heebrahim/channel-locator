@@ -2,4 +2,5 @@
   color: black;
   border: inherit;
   background-clip: inherit;
+  overflow: auto;
 }

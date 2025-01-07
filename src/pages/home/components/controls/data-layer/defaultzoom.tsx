@@ -1,21 +1,14 @@
 import * as L from "leaflet";
 
-import style from "./style.module.css";
 
-import {
-  Popover,
-  PopoverBody,
-  PopoverContent,
-  PopoverTrigger,
-} from "@chakra-ui/react";
 import { PropsWithChildren, useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 
-import { IoBarChart } from "react-icons/io5";
-
+import { TbZoomReset } from "react-icons/tb";
+import { defaultZoom } from "@/pages/home/utils";
 export interface Props extends L.ControlOptions, PropsWithChildren {}
 
-export function DataLayerControl({ children, ...props }: Props) {
+export function DefaultZommControl({...props }: Props) {
   const map = useMap();
 
   const [elRef, setRef] = useState<HTMLElement | null>(null);
@@ -40,23 +33,20 @@ export function DataLayerControl({ children, ...props }: Props) {
   return (
     <div
       ref={setRef}
-      title="Branches"
-      className="data-layers data-layers-intro leaflet-bar leaflet-control relative"
-    >
-      <Popover placement="left-start" closeOnBlur={false}>
-        <PopoverTrigger>
+      title="Default Zoom"
+      className="zoom zoom-default leaflet-bar leaflet-control relative"
+    >   
+ 
           <a
             role="button"
             className="!flex leaflet-bar-part leaflet-bar-part-single"
+            onClick={() => {
+              map.setView(map.getCenter(), defaultZoom);
+            }}
           >
-            <IoBarChart size={15} className="m-auto" />
+            <TbZoomReset size={15} className="m-auto" />
           </a>
-        </PopoverTrigger>
 
-        <PopoverContent className={style.popup}>
-          <PopoverBody height={600}  className="overflow-y-auto">{children}</PopoverBody>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }
